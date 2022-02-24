@@ -31,11 +31,15 @@ iterator TextBuffer::AtLineCol(size_t line, size_t col) {
   for (size_t i = 0; i < spans.size(); i++) {
     Span span = spans[i];
     if (line < lines_traversed + span.newline_ptrs.len) {
-      /* TODO: allows columns beyond end of line */
-      iterator iter = {this, epoch, i,
-                       (size_t)(span.newline_ptrs[line - lines_traversed] -
-                                span.contents.begin) +
-                           1};
+
+      size_t byte_offset = 0;
+      if (line - lines_traversed > 0) {
+        byte_offset = (size_t)(span.newline_ptrs[line - lines_traversed] -
+                               span.contents.begin) +
+                      1;
+      }
+      iterator iter = {this, epoch, i, byte_offset};
+      /* TODO: currently allows columns beyond end of the line */
       iter += col;
       return iter;
     }
@@ -44,6 +48,12 @@ iterator TextBuffer::AtLineCol(size_t line, size_t col) {
 
   unreachable(
       "attempted to create iterator with line/col index outside buffer");
+}
+
+/* helper methods */
+bool iterator::IsEOF() {
+  return (span_idx + 1 == parent->spans.size() &&
+          byte_offset == parent->spans[span_idx].contents.len);
 }
 
 /* overloads */

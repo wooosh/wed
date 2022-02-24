@@ -7,8 +7,13 @@ project('editor', 'cpp',
 	#'b_sanitize=address'
   ])
 
+deps = [
+  dependency('sdl2'),
+  dependency('SDL2_ttf')
+]
 
-catch2_dep = dependency('catch2')
+# for some reason threads needs to be specified as a dependency TODO: find out why
+test_deps = deps + [dependency('catch2'), dependency('threads')]
 
 srcs = []
 test_srcs = []
@@ -39,12 +44,20 @@ test_srcs += [
   'src/TextBuffer/TextBufferTest.cxx'
 ]
 
+# UI
+srcs += [
+  'src/UI/Backend.cxx',
+  'src/UI/Font.cxx',
+  'src/UI/ViewEditor.cxx'
+]
 
-exe = executable('editor', srcs + [ 'src/EntryMain.cxx' ])
+exe = executable('editor',
+srcs + [ 'src/EntryMain.cxx' ],
+dependencies: deps)
 
 test_exe = executable('editor_tests',
   srcs + test_srcs + [ 'src/EntryTest.cxx' ],
-  dependencies: catch2_dep)
+  dependencies: test_deps)
 
 
 test('catch2', test_exe, args: ['-r', 'tap'], protocol: 'tap')
