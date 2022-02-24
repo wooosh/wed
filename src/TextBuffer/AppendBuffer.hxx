@@ -41,17 +41,6 @@ template <typename T> AppendBuffer<T>::~AppendBuffer() {
   }
 }
 
-/*
-template <typename T> void AppendBuffer<T>::PushNewChunk(size_t min_capacity) {
-  size_t capacity = std::max(min_capacity, min_chunk_capacity);
-
-  void *ptr = mmap(nullptr, capacity * sizeof(T), PROT_READ | PROT_WRITE,
-                   MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-  assume(ptr != MAP_FAILED, strerror(errno));
-
-  chunks.push_back({static_cast<T *>(ptr), 0, capacity});
-}*/
-
 template <typename T>
 template <typename ForwardIter>
 ConstView<T> AppendBuffer<T>::CopyFrom(const ForwardIter begin,
