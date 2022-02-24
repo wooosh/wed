@@ -40,10 +40,10 @@ test_srcs += [
 ]
 
 
-exe = executable('editor', srcs + 'src/EntryMain.cxx')
+exe = executable('editor', srcs + [ 'src/EntryMain.cxx' ])
 
 test_exe = executable('editor_tests',
-  srcs + test_srcs + 'src/EntryTest.cxx',
+  srcs + test_srcs + [ 'src/EntryTest.cxx' ],
   dependencies: catch2_dep)
 
 
