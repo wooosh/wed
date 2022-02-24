@@ -152,6 +152,12 @@ struct TextBuffer {
  * NOTE: lowercase to conform with existing iterator convention in libstdc++
  */
 struct TextBuffer::iterator {
+  using difference_type = std::ptrdiff_t;
+  using value_type = uint8_t;
+  using pointer = uint8_t *;
+  using reference = uint8_t &;
+  using iterator_category = std::bidirectional_iterator_tag;
+
   TextBuffer *parent;
   /* buffer epoch that the iterator is valid for */
   size_t epoch;
