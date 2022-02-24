@@ -23,7 +23,7 @@ void ViewEditor::draw(Render::Backend &render) {
   TextBuffer::iterator i = buffer.AtLineCol(first_line, 0);
 
   std::string run;
-  std::cerr << "tried to draw " << run << "\n";
+
   while (y + font.line_height < viewport.y + viewport.h && !i.IsEOF()) {
     /* draw gutter/line number */
     auto t1 = std::chrono::high_resolution_clock::now();

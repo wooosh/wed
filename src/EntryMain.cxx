@@ -56,16 +56,17 @@ int main(int argc, char **argv) {
       SDL_CreateWindow("sdl", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
                        dm.w * 0.8, dm.h * 0.8, SDL_WINDOW_RESIZABLE);
   exists(window, SDL_GetError);
-  auto font = Render::Font("/usr/share/fonts/TTF/DejaVuSansMono.ttf", 14);
+  auto font = Render::Font("/usr/share/fonts/TTF/DejaVuSansMono.ttf", 12);
   auto backend = Render::Backend(window);
 
   auto editor = ViewEditor(font, tb);
   editor.first_line = 0;
   auto root = ViewRoot(editor);
 
-  for (size_t i = 0; i < 2 * 60; i++) {
+  for (size_t i = 0; i < 3 * 60; i++) {
     SDL_Delay(1000 / 60);
     editor.first_line++;
+    editor.first_line %= 200;
     backend.clear();
     auto t1 = std::chrono::high_resolution_clock::now();
     root.draw(backend);
@@ -78,6 +79,7 @@ int main(int argc, char **argv) {
     std::chrono::duration<double, std::micro> commit_time =
         std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2);
 
+    std::cerr << "\nNEW FRAME\n";
     std::cerr << "draw:   " << editor.draw_time << "us\n";
     std::cerr << "layout: " << layout_time.count() << "us\n";
     std::cerr << "commit: " << commit_time.count() << "us\n";
