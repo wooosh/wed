@@ -3,6 +3,7 @@
 #include "SDL.h"
 #include "SDL_ttf.h"
 #include <cassert>
+#include <optional>
 
 static SDL_Rect toSDLRect(Render::Rect r) {
   SDL_Rect sdl_rect;
@@ -40,7 +41,7 @@ Backend::Backend(SDL_Window *win) {
   bool success = SDL_SetHint(SDL_HINT_RENDER_BATCHING, "1");
   assume(success, "render batching required");
   sdl_render = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
-  exists(sdl_render, SDL_GetError);
+  assume(sdl_render != nullptr, SDL_GetError);
 
   int err = SDL_SetRenderDrawBlendMode(sdl_render, SDL_BLENDMODE_BLEND);
   assume(err == 0, SDL_GetError);
@@ -81,10 +82,10 @@ void Backend::drawText(uint x, uint y, Font &font, const char *text,
                        Color color) {
   SDL_Surface *surface =
       TTF_RenderUTF8_Blended(font.sdl_font, text, toSDLColor(color));
-  exists(surface, TTF_GetError);
+  assume(surface != nullptr, TTF_GetError);
 
   auto texture = SDL_CreateTextureFromSurface(sdl_render, surface);
-  exists(texture, SDL_GetError);
+  assume(texture != nullptr, SDL_GetError);
   SDL_FreeSurface(surface);
 
   SDL_Rect dst_rect = {.x = (int)x, .y = (int)y, .w = 0, .h = 0};

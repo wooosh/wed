@@ -9,8 +9,8 @@ void LocateFontDeinit() {}
 /* TODO: use more than just font family name on macos */
 /* TODO: release any allocate data */
 std::optional<std::string> LocateFontFile(FontFaceProperties font_face) {
-  CFStringRef cf_str = CFStringCreateWithCString(nullptr, font_face.c_str(),
-                                                 kCFStringEncodingUTF8);
+  CFStringRef cf_str = CFStringCreateWithCString(
+      nullptr, font_face.family_name.c_str(), kCFStringEncodingUTF8);
   if (cf_str == nullptr)
     return std::nullopt;
 

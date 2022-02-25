@@ -8,7 +8,7 @@
 namespace Render {
 Font::Font(const char *filename, int pt_size) {
   sdl_font = TTF_OpenFont(filename, pt_size);
-  exists(sdl_font, TTF_GetError);
+  assume(sdl_font != nullptr, TTF_GetError);
   // TODO: null check + TTF_GetError
   line_height = TTF_FontLineSkip(sdl_font);
   TTF_SetFontHinting(sdl_font, TTF_HINTING_LIGHT);

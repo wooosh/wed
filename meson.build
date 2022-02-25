@@ -60,10 +60,15 @@ exe = executable('editor',
 srcs + [ 'src/EntryMain.cxx' ],
 dependencies: deps)
 
+# TODO: disable test build by default
 test_exe = executable('editor_tests',
   srcs + test_srcs + [ 'src/EntryTest.cxx' ],
   # for some reason threads needs to be specified as a dependency TODO: find out why
   dependencies: deps + [dependency('catch2'), dependency('threads')])
+ 
+run_target('run_tests', command: test_exe)
 
-
-test('catch2', test_exe, args: ['-r', 'tap'], protocol: 'tap')
+clang_tidy = find_program('clang-tidy', required: false)
+if clang_tidy.found()
+  run_target('lint', command: [clang_tidy, '-p', meson.build_root()] + files(srcs))
+endif

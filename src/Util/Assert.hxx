@@ -4,7 +4,6 @@
 
 #define assume(condition, msg)                                                 \
   assume_impl(__FILE__, __LINE__, __func__, (condition), (msg))
-#define exists(ptr, msg) assume((ptr) != nullptr, (msg))
 #define unreachable(msg)                                                       \
   assume(false, (msg));                                                        \
   __builtin_unreachable()

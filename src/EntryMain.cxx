@@ -1,5 +1,5 @@
 #include "Platform/LocateFont.hxx"
-#include "SDL2/SDL.h"
+#include "SDL.h"
 #include "TextBuffer/TextBuffer.hxx"
 #include "UI/Backend.hxx"
 #include "UI/Render.hxx"
@@ -66,7 +66,7 @@ int main(int argc, char **argv) {
   SDL_Window *window =
       SDL_CreateWindow("sdl", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
                        dm.w * 0.8, dm.h * 0.8, SDL_WINDOW_RESIZABLE);
-  exists(window, SDL_GetError);
+  assume(window != nullptr, SDL_GetError);
   auto font = Render::Font(path.value().c_str(), 12);
   auto backend = Render::Backend(window);
 
