@@ -8,8 +8,8 @@ project('editor', 'cpp',
   ])
 
 deps = [
-  dependency('sdl2'),
-  dependency('SDL2_ttf')
+  dependency('sdl2', default_options: ['werror=false', 'warning_level=0']),
+  dependency('SDL2_ttf', default_options: ['werror=false', 'warning_level=0'])
 ]
 
 srcs = []
