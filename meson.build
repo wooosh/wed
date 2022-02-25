@@ -19,7 +19,8 @@ test_srcs = []
 # POSIX-compliant platforms
 if 'linux darwin freebsd netbsd openbsd'.contains(host_machine.system())
   if 'darwin' == host_machine.system()
-    error('todo')
+    deps += [dependency('CoreText'), dependency('CoreFoundation')]
+    srcs += ['src/Platform/LocateFontCoreText.cxx']
   else
     deps += dependency('fontconfig')
     srcs += ['src/Platform/LocateFontFontConfig.cxx']
