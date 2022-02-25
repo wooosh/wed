@@ -1,6 +1,6 @@
 #include "../Util/Assert.hxx"
 #include "Render.hxx"
-#include <SDL_ttf.h>
+#include "SDL_ttf.h"
 #include <cstdint>
 #include <iostream>
 #include <string>

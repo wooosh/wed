@@ -5,7 +5,7 @@
 #include <string_view>
 #include <vector>
 
-#include <SDL2/SDL_ttf.h>
+#include "SDL_ttf.h"
 
 namespace Render {
 struct Color {

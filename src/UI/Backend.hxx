@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Render.hxx"
-#include <SDL2/SDL.h>
+#include "SDL.h"
 
 namespace Render {
 struct Backend {

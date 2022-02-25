@@ -1,7 +1,7 @@
 #include "Backend.hxx"
 #include "../Util/Assert.hxx"
-#include <SDL2/SDL.h>
-#include <SDL_ttf.h>
+#include "SDL.h"
+#include "SDL_ttf.h"
 #include <cassert>
 
 static SDL_Rect toSDLRect(Render::Rect r) {
@@ -37,6 +37,8 @@ Backend::Backend(SDL_Window *win) {
   assert(win != nullptr);
   window = win;
 
+  bool success = SDL_SetHint(SDL_HINT_RENDER_BATCHING, "1");
+  assume(success, "render batching required");
   sdl_render = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
   exists(sdl_render, SDL_GetError);
 

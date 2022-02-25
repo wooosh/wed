@@ -12,15 +12,19 @@ deps = [
   dependency('SDL2_ttf')
 ]
 
-# for some reason threads needs to be specified as a dependency TODO: find out why
-test_deps = deps + [dependency('catch2'), dependency('threads')]
-
 srcs = []
 test_srcs = []
 
 # Platform
 # POSIX-compliant platforms
 if 'linux darwin freebsd netbsd openbsd'.contains(host_machine.system())
+  if 'darwin' == host_machine.system()
+    error('todo')
+  else
+    deps += dependency('fontconfig')
+    srcs += ['src/Platform/LocateFontFontConfig.cxx']
+  endif
+  
   srcs += [
     'src/Platform/VirtualMemoryPosix.cxx'
   ]
@@ -57,7 +61,8 @@ dependencies: deps)
 
 test_exe = executable('editor_tests',
   srcs + test_srcs + [ 'src/EntryTest.cxx' ],
-  dependencies: test_deps)
+  # for some reason threads needs to be specified as a dependency TODO: find out why
+  dependencies: deps + [dependency('catch2'), dependency('threads')])
 
 
 test('catch2', test_exe, args: ['-r', 'tap'], protocol: 'tap')
