@@ -1,4 +1,5 @@
 #include "LocateFont.hxx"
+#include "SDL_video.h"
 #include <CoreFoundation/CoreFoundation.h>
 #include <CoreText/CoreText.h>
 #include <optional>
@@ -16,13 +17,28 @@ std::optional<std::string> LocateFontFile(FontFaceProperties font_face) {
 
   CTFontDescriptorRef font_ref =
       CTFontDescriptorCreateWithNameAndSize(cf_str, font_face.pt_size);
-  if (font_ref == nullptr)
+  if (font_ref == nullptr) {
+    CFRelease(cf_str);
     return std::nullopt;
+  }
 
   CFURLRef url =
       (CFURLRef)CTFontDescriptorCopyAttribute(font_ref, kCTFontURLAttribute);
-  CFStringRef url_str = CFURLGetString(url);
+  if (url == nullptr) {
+    CFRelease(cf_str);
+    CFRelease(font_ref);
+    return std::nullopt;
+  }
 
-  return std::string(CFStringGetCStringPtr(url_str, kCFStringEncodingUTF8),
-                     CFStringGetLength(url_str));
+  CFStringRef url_str = CFURLGetString(url);
+  url_str = CFRetain(url_str);
+
+  std::string path(CFStringGetCStringPtr(url_str, kCFStringEncodingUTF8),
+                   CFStringGetLength(url_str));
+
+  CFRelease(url_str);
+  CFRelease(url);
+  CFRelease(font_ref);
+  CFRelease(cf_str);
+  return path;
 }
