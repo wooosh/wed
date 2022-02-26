@@ -74,10 +74,10 @@ void ViewEditor::draw(Render::Backend &render) {
 }
 
 void ViewEditor::drawRun(Render::Backend &render, uint x, uint y,
-                         std::string run) {
+                         const std::string &run) {
   /* TODO: drawText should not take a cstr */
   auto t1 = std::chrono::high_resolution_clock::now();
-  if (run.size() > 0)
+  if (!run.empty())
     render.drawText(x, y, font, run.c_str(), Render::RGB(0x111111));
   auto t2 = std::chrono::high_resolution_clock::now();
 

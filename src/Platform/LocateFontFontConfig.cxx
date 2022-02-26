@@ -49,8 +49,9 @@ static FcConfig *config;
 
 bool LocateFontInit() {
   bool success = FcInit();
-  if (!success)
+  if (!success) {
     return false;
+  }
 
   config = FcInitLoadConfigAndFonts();
   return true;
@@ -61,7 +62,7 @@ void LocateFontDeinit() {
   FcFini();
 }
 
-std::optional<std::string> LocateFontFile(FontFaceProperties font_face) {
+std::optional<std::string> LocateFontFile(const FontFaceProperties &font_face) {
   std::optional<std::string> font_path = std::nullopt;
   FcResult result;
   FcPattern *queried_font;
@@ -71,36 +72,42 @@ std::optional<std::string> LocateFontFile(FontFaceProperties font_face) {
   /* Property names:
    * https://www.freedesktop.org/software/fontconfig/fontconfig-devel/x19.html
    */
-  bool success;
 
+  bool success;
   success = FcPatternAddString(pattern, FC_FAMILY,
                                (const FcChar8 *)font_face.family_name.c_str());
-  if (!success)
+  if (!success) {
     goto end;
+  }
 
   success = FcPatternAddDouble(pattern, FC_SIZE, font_face.pt_size);
-  if (!success)
+  if (!success) {
     goto end;
+  }
 
   success =
       FcPatternAddInteger(pattern, FC_WEIGHT, ConvertWeight(font_face.weight));
-  if (!success)
+  if (!success) {
     goto end;
+  }
 
   success = FcPatternAddInteger(pattern, FC_WIDTH,
                                 ConvertStretchType(font_face.stretch));
-  if (!success)
+  if (!success) {
     goto end;
+  }
 
   success =
       FcPatternAddInteger(pattern, FC_SLANT, ConvertSlant(font_face.slant));
-  if (!success)
+  if (!success) {
     goto end;
+  }
 
   /* apply their config settings to the pattern */
   success = FcConfigSubstitute(config, pattern, FcMatchPattern);
-  if (!success)
+  if (!success) {
     goto end;
+  }
 
   /* fill in default pattern values if neccesary */
   FcDefaultSubstitute(pattern);
@@ -109,12 +116,15 @@ std::optional<std::string> LocateFontFile(FontFaceProperties font_face) {
 
   queried_font = FcFontMatch(config, pattern, &result);
   if (result == FcResultOutOfMemory || result == FcResultNoMatch ||
-      !queried_font)
+      queried_font == nullptr) {
     goto end_query;
+  }
 
   FcChar8 *cstr_path;
-  if (FcPatternGetString(queried_font, FC_FILE, 0, &cstr_path) != FcResultMatch)
+  if (FcPatternGetString(queried_font, FC_FILE, 0, &cstr_path) !=
+      FcResultMatch) {
     goto end_query;
+  }
 
   font_path = std::string((char *)cstr_path);
 

@@ -48,4 +48,4 @@ void LocateFontDeinit();
 /* Return a path to the best matching font file, if available
  * Requires LocateFontInit to be run once
  * THREAD-UNSAFE */
-std::optional<std::string> LocateFontFile(FontFaceProperties);
+std::optional<std::string> LocateFontFile(const FontFaceProperties &);

@@ -25,8 +25,9 @@ void *Map(Handle &handle, bool writable) {
          "virtual memory handles cannot be mapped more than once");
 
   int flags = PROT_READ;
-  if (writable)
+  if (writable) {
     flags |= PROT_WRITE;
+  }
 
   handle.mapped_address =
       mmap(nullptr, handle.size, flags, MAP_PRIVATE | MAP_ANONYMOUS,

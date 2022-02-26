@@ -70,5 +70,8 @@ run_target('run_tests', command: test_exe)
 
 clang_tidy = find_program('clang-tidy', required: false)
 if clang_tidy.found()
-  run_target('lint', command: [clang_tidy, '-p', meson.build_root()] + files(srcs))
+  run_target('lint', command: [
+    clang_tidy,'-p', meson.build_root(),
+    '-checks=performance-*,readability-*,portability-*,-readability-implicit-bool-conversion'] + files(srcs))
 endif
+# ,bugprone-*,cert-*,google-*

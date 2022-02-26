@@ -167,7 +167,7 @@ struct TextBuffer::iterator {
   size_t byte_offset;
 
   /* Returns true if the iterator is at the end of the file */
-  bool IsEOF();
+  bool IsEOF() const;
 
   /* Returns the remainder of the current span, and advances to the next.
    * Returns the last valid span in the case of EOF */

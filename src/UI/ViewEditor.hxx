@@ -14,5 +14,5 @@ struct ViewEditor : View {
       : font(font), buffer(buffer){};
 
   virtual void draw(Render::Backend &render);
-  void drawRun(Render::Backend &render, uint x, uint y, std::string);
+  void drawRun(Render::Backend &render, uint x, uint y, const std::string &);
 };
