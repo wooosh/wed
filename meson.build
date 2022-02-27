@@ -8,8 +8,8 @@ project('editor', 'cpp',
   ])
 
 deps = [
+  dependency('GL'),
   dependency('sdl2', default_options: ['werror=false', 'warning_level=0']),
-  dependency('SDL2_ttf', default_options: ['werror=false', 'warning_level=0'])
 ]
 
 srcs = []
@@ -49,10 +49,15 @@ test_srcs += [
   'src/TextBuffer/TextBufferTest.cxx'
 ]
 
+# Render
+srcs += [
+  'src/Render/Shader.cxx',
+  'src/Render/RenderContext.cxx',
+  'src/Render/GlyphAtlas.cxx'
+]
+
 # UI
 srcs += [
-  'src/UI/Backend.cxx',
-  'src/UI/Font.cxx',
   'src/UI/ViewEditor.cxx'
 ]
 

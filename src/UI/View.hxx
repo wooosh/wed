@@ -1,6 +1,7 @@
 #pragma once
 
-#include "Backend.hxx"
+#include "../Render/RenderContext.hxx"
+/* TODO: move types in Render/Types.hxx */
 #include "Render.hxx"
 
 // only the parent of a view can increase the size of it's region,
@@ -12,7 +13,7 @@ struct View {
   Render::Rect viewport;
   /* TODO: should this be passed as a reference? why not just global editor/draw
    * state */
-  virtual void draw(Render::Backend &) = 0;
+  virtual void draw(RenderContext &) = 0;
   /* TODO: handle_event */
   virtual ~View() {}
 };
@@ -31,9 +32,9 @@ public:
     viewport.y = 0;
   };
 
-  virtual void draw(Render::Backend &render) {
-    SDL_GetRendererOutputSize(render.sdl_render, (int *)&viewport.w,
-                              (int *)&viewport.h);
+  virtual void draw(RenderContext &render) {
+    viewport.w = render.win_w;
+    viewport.h = render.win_h;
     child.viewport = viewport;
     // render.commit();
     child.draw(render);

@@ -1,7 +1,12 @@
 #include "Platform/LocateFont.hxx"
+#include "Render/RenderContext.hxx"
 #include "SDL.h"
+#include <climits>
+#define GL_GLEXT_PROTOTYPES
+#include "Render/GlyphAtlas.hxx"
+#include "SDL_opengl.h"
+#include "SDL_video.h"
 #include "TextBuffer/TextBuffer.hxx"
-#include "UI/Backend.hxx"
 #include "UI/Render.hxx"
 #include "UI/View.hxx"
 #include "UI/ViewEditor.hxx"
@@ -37,13 +42,15 @@ int main(int argc, char **argv) {
 
   // LocateFont init
   assume(LocateFontInit(), "failed to init font locator");
-  std::optional<std::string> path = LocateFontFile(
+  std::optional<std::string> font_path = LocateFontFile(
       {argv[1], 12.0, FontFaceProperties::WEIGHT_REGULAR,
-       FontFaceProperties::STRETCH_MEDIUM, FontFaceProperties::SLANT_ITALIC});
-  assume(path.has_value(), "couldn't locate font");
+       FontFaceProperties::STRETCH_MEDIUM, FontFaceProperties::SLANT_NORMAL});
+  assume(font_path.has_value(), "couldn't locate font");
 
-  TextBuffer tb;
-  readFile(tb, argv[2]);
+  // font render init
+  InitFontRenderer();
+
+  GlyphAtlas atlas = GenerateAtlas(font_path.value(), 12.0);
 
   // SDL2 init
   int err = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
@@ -52,37 +59,50 @@ int main(int argc, char **argv) {
   SDL_EnableScreenSaver();
   atexit(SDL_Quit);
 
-  // SDL2_ttf init
-  err = TTF_Init();
-  assume(err == 0, TTF_GetError);
-  atexit(TTF_Quit);
-
   // create window
   // get screen size
   SDL_DisplayMode dm;
   err = SDL_GetCurrentDisplayMode(0, &dm);
   assume(err == 0, SDL_GetError);
 
-  SDL_Window *window =
-      SDL_CreateWindow("sdl", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-                       dm.w * 0.8, dm.h * 0.8, SDL_WINDOW_RESIZABLE);
-  assume(window != nullptr, SDL_GetError);
-  auto font = Render::Font(path.value().c_str(), 12);
-  auto backend = Render::Backend(window);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
-  auto editor = ViewEditor(font, tb);
+  SDL_Window *window = SDL_CreateWindow(
+      "sdl", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, dm.w * 0.8,
+      dm.h * 0.8, SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL);
+  assume(window != nullptr, SDL_GetError);
+
+  SDL_GLContext context = SDL_GL_CreateContext(window);
+  RenderContext rctx(window);
+  int w, h;
+  SDL_GetWindowSize(window, &w, &h);
+  rctx.Init();
+
+  std::cerr << atlas.image_w << " " << atlas.image_h << " "
+            << atlas.image_h * atlas.image_w * 3 << " " << atlas.image.size()
+            << "\n";
+
+  // rctx.PushTexture(0, 0, 0, 10, 0, atlas.image_w - 10, atlas.image_h);
+  rctx.LoadTexture(&atlas.image[0], atlas.image_w, atlas.image_h);
+
+  TextBuffer tb;
+  readFile(tb, argv[2]);
+
+  auto editor = ViewEditor(atlas, tb);
   editor.first_line = 0;
   auto root = ViewRoot(editor);
 
   for (size_t i = 0; i < 3 * 30; i++) {
-    SDL_Delay(1000 / 30);
+    SDL_Delay(1000 / 10);
     editor.first_line++;
     editor.first_line %= 200;
-    backend.clear();
+
     auto t1 = std::chrono::high_resolution_clock::now();
-    root.draw(backend);
+    root.draw(rctx);
     auto t2 = std::chrono::high_resolution_clock::now();
-    backend.commit();
+    rctx.Commit();
     auto t3 = std::chrono::high_resolution_clock::now();
 
     std::chrono::duration<double, std::micro> layout_time =
@@ -100,6 +120,7 @@ int main(int argc, char **argv) {
   }
 
   LocateFontDeinit();
+  SDL_GL_DeleteContext(context);
   SDL_DestroyWindow(window);
   SDL_Quit();
 }

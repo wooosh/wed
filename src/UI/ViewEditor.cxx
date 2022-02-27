@@ -3,16 +3,23 @@
 #include <chrono>
 #include <iostream>
 
-void ViewEditor::draw(Render::Backend &render) {
+void ViewEditor::draw(RenderContext &render) {
+  const uint z_bg = 0;
+  const uint z_gutter = 1;
+  // const uint z_text = 2;
+
   draw_time = 0;
-  const int digit_width = font.GlyphAdvance('0');
+  const int digit_width = font.glyphs['0'].advance;
   assert(digit_width > 0);
   const uint gutter_width = (uint)digit_width * 5;
 
   auto t1 = std::chrono::high_resolution_clock::now();
-  render.fillRect(viewport, Render::RGB(0xF7F4EF));
-  render.fillRect({viewport.x, viewport.y, gutter_width, viewport.w},
-                  Render::RGBA(0x00000022));
+
+  render.DrawRect(z_bg, viewport.x, viewport.y, viewport.w, viewport.h,
+                  {0xf7, 0xf4, 0xef, 0xff});
+  render.DrawRect(z_gutter, viewport.x, viewport.y, gutter_width, viewport.w,
+                  {0xf7, 0xf4, 0xef, 0x22});
+
   auto t2 = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double, std::micro> fill_time =
       std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1);
@@ -26,14 +33,7 @@ void ViewEditor::draw(Render::Backend &render) {
 
   while (y + font.line_height < viewport.y + viewport.h && !i.IsEOF()) {
     /* draw gutter/line number */
-    auto t1 = std::chrono::high_resolution_clock::now();
-    render.drawText(viewport.y + digit_width, y, font,
-                    std::to_string(line_num + 1).c_str(),
-                    Render::RGB(0x999999));
-    auto t2 = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double, std::micro> fill_time =
-        std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1);
-    draw_time += fill_time.count();
+    drawRun(render, viewport.y + digit_width, y, std::to_string(line_num + 1));
 
     /* draw line */
     size_t width = 0;
@@ -60,7 +60,7 @@ void ViewEditor::draw(Render::Backend &render) {
         /* TODO: better unprintable char handling w/unicode */
         c = '?';
       }
-      int advance = font.GlyphAdvance(*i);
+      int advance = font.glyphs[*i].advance;
       if (width + advance >= viewport.w - gutter_width) {
         /* commit run */
         drawRun(render, viewport.x + gutter_width, y, run);
@@ -73,12 +73,18 @@ void ViewEditor::draw(Render::Backend &render) {
   }
 }
 
-void ViewEditor::drawRun(Render::Backend &render, uint x, uint y,
+void ViewEditor::drawRun(RenderContext &render, uint x, uint y,
                          const std::string &run) {
   /* TODO: drawText should not take a cstr */
   auto t1 = std::chrono::high_resolution_clock::now();
-  if (!run.empty())
-    render.drawText(x, y, font, run.c_str(), Render::RGB(0x111111));
+  size_t pos = x;
+  for (size_t i = 0; i < run.size(); i++) {
+    if (isprint(run[i])) {
+      render.DrawGlyph(3, pos, y + font.line_height, font.glyphs[run[i]],
+                       {0x11, 0x11, 0x11, 0xff});
+      pos += font.glyphs[run[i]].advance;
+    }
+  }
   auto t2 = std::chrono::high_resolution_clock::now();
 
   std::chrono::duration<double, std::micro> run_time =

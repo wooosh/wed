@@ -4,15 +4,15 @@
 #include "View.hxx"
 
 struct ViewEditor : View {
-  Render::Font &font;
+  GlyphAtlas &font;
   TextBuffer &buffer;
   size_t first_line;
 
   double draw_time;
 
-  ViewEditor(Render::Font &font, TextBuffer &buffer)
+  ViewEditor(GlyphAtlas &font, TextBuffer &buffer)
       : font(font), buffer(buffer){};
 
-  virtual void draw(Render::Backend &render);
-  void drawRun(Render::Backend &render, uint x, uint y, const std::string &);
+  virtual void draw(RenderContext &render);
+  void drawRun(RenderContext &render, uint x, uint y, const std::string &);
 };
