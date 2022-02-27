@@ -69,7 +69,8 @@ dependencies: deps)
 test_exe = executable('editor_tests',
   srcs + test_srcs + [ 'src/EntryTest.cxx' ],
   # for some reason threads needs to be specified as a dependency TODO: find out why
-  dependencies: deps + [dependency('catch2'), dependency('threads')])
+  dependencies: deps + [dependency('catch2'), dependency('threads')],
+  build_by_default: false)
  
 run_target('run_tests', command: test_exe)
 

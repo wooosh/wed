@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <string>
+#include <sys/types.h>
 #include <vector>
 
 struct Glyph {

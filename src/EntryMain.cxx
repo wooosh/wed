@@ -75,6 +75,7 @@ int main(int argc, char **argv) {
   assume(window != nullptr, SDL_GetError);
 
   SDL_GLContext context = SDL_GL_CreateContext(window);
+  SDL_GL_SetSwapInterval(0);
   RenderContext rctx(window);
   int w, h;
   SDL_GetWindowSize(window, &w, &h);
@@ -95,7 +96,7 @@ int main(int argc, char **argv) {
   auto root = ViewRoot(editor);
 
   for (size_t i = 0; i < 3 * 30; i++) {
-    SDL_Delay(1000 / 10);
+    // SDL_Delay(1000 / 10);
     editor.first_line++;
     editor.first_line %= 200;
 
@@ -117,6 +118,9 @@ int main(int argc, char **argv) {
     std::cerr << "total:  " << layout_time.count() + commit_time.count()
               << "us\n";
     std::cerr << "nodraw: " << layout_time.count() - editor.draw_time << "us\n";
+    std::cerr << "fps: "
+              << 1000000 / (layout_time.count() + commit_time.count())
+              << " fps\n";
   }
 
   LocateFontDeinit();

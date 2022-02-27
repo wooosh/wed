@@ -16,6 +16,7 @@
  * - better glyph atlas handling
  * - frametimes
  * - layout directives?
+ * - fix alpha blending
  */
 
 struct RenderContext {
