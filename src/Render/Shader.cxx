@@ -32,6 +32,7 @@ static std::string_view fragment_shader = R"(
   in vec4 v_color;
 
   out vec4 o_color;
+  out vec4 o_alpha;
 
   uniform float texture_saturation;
   uniform sampler2D texture1;
@@ -40,10 +41,39 @@ static std::string_view fragment_shader = R"(
   void main() {
     /* TODO: fix texture blending */
     o_color = v_color; // * texture(texture1, v_texture_pos/u_texture_size);
+    o_alpha = vec4(1, 1, 1, 1);
   }
 )";
 
 static std::string_view subpx_fragment_shader = R"(
+  /*
+  * Copyright (c) 2020 Chad Brokaw
+  *
+  * Permission is hereby granted, free of charge, to any
+  * person obtaining a copy of this software and associated
+  * documentation files (the "Software"), to deal in the
+  * Software without restriction, including without
+  * limitation the rights to use, copy, modify, merge,
+  * publish, distribute, sublicense, and/or sell copies of
+  * the Software, and to permit persons to whom the Software
+  * is furnished to do so, subject to the following
+  * conditions:
+  *
+  * The above copyright notice and this permission notice
+  * shall be included in all copies or substantial portions
+  * of the Software.
+  *
+  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
+  * ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+  * TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+  * PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
+  * SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+  * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+  * IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+  * DEALINGS IN THE SOFTWARE.
+  */
+
   #version 330 core
 
   in vec2 v_texture_pos;
@@ -55,7 +85,6 @@ static std::string_view subpx_fragment_shader = R"(
   uniform sampler2D texture1;
   uniform vec2 u_texture_size;
 
-  /* TODO: mit license credit */
   const float gamma_lut[256] = float[256](
     0.000, 0.058, 0.117, 0.175, 0.234, 0.293, 0.353, 0.413, 0.473, 0.534, 0.597, 0.661, 0.727, 0.797, 0.876, 1.000, 
     0.000, 0.021, 0.082, 0.143, 0.203, 0.264, 0.325, 0.386, 0.448, 0.510, 0.572, 0.635, 0.700, 0.766, 0.836, 1.000, 
@@ -164,7 +193,7 @@ ShaderPrograms LoadShaders(void) {
     glBindAttribLocation(progs[i], SHADER_SCREEN_COORD, "i_screen_coord");
     glBindAttribLocation(progs[i], SHADER_TEXTURE_COORD, "i_texture_coord");
     glBindAttribLocation(progs[i], SHADER_COLOR, "i_color");
-    glBindAttribLocation(progs[i], SHADER_COLOR, "i_depth");
+    glBindAttribLocation(progs[i], SHADER_DEPTH, "i_depth");
     glLinkProgram(progs[i]);
   }
 

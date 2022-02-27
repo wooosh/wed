@@ -7,7 +7,6 @@
 #include "SDL_opengl.h"
 #include "SDL_video.h"
 #include "TextBuffer/TextBuffer.hxx"
-#include "UI/Render.hxx"
 #include "UI/View.hxx"
 #include "UI/ViewEditor.hxx"
 #include "Util/Assert.hxx"
@@ -95,8 +94,8 @@ int main(int argc, char **argv) {
   editor.first_line = 0;
   auto root = ViewRoot(editor);
 
-  for (size_t i = 0; i < 3 * 30; i++) {
-    // SDL_Delay(1000 / 10);
+  for (size_t i = 0; i < 30; i++) {
+    SDL_Delay(1000 / 10);
     editor.first_line++;
     editor.first_line %= 200;
 

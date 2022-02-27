@@ -9,6 +9,7 @@ struct Glyph {
   float advance;
   int padding_x, padding_y;
   /* atlas coordinates (pixels) */
+  /* TODO: change to rect */
   uint x, y, w, h;
 };
 

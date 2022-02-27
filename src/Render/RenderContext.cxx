@@ -49,7 +49,7 @@ void RenderContext::Init(void) {
                         (void *)offsetof(Vertex, depth));
 
   /* default screen color is red */
-  glClearColor(1.0, 0.0, 0.0, 0.0);
+  glClearColor(0.0, 0.0, 0.0, 1.0);
 
   /* set up orthographic projection*/
   SDL_GetWindowSize(window, (int *)&win_w, (int *)&win_h);
@@ -77,6 +77,22 @@ void RenderContext::UpdateProjection() {
     {0.0f,   0.0f,    -2.0f/r, 0.0f},
     {-1.0f,  1.0f,    -1.0f,   1.0f}
   }};
+
+  /*
+  float f = max_z;
+  float n = 1.00f;
+  
+  r = f - n;*/
+
+  /* clang-format off */
+  
+  /*
+  projection_matrix = {{
+    {2.0f/w, 0.0f,    0.0f,    0.0f},
+    {0.0f,   2.0f/-h, 0.0f,    0.0f},
+    {0.0f,   0.0f,    -2.0f/r, 0.0f},
+    {-1.0f,  1.0f,    -(f+n)/r,   1.0f}
+  }};*/
   /* clang-format on */
 }
 
@@ -99,62 +115,59 @@ void RenderContext::LoadTexture(const uint8_t *data, size_t w, size_t h) {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 }
 
-void RenderContext::PushQuad(uint z, uint dst_x, uint dst_y, uint src_x,
-                             uint src_y, uint w, uint h, vec4<uint8_t> color,
+void RenderContext::PushQuad(RenderLayerIdx z, Point dst, Point src, uint w,
+                             uint h, vec4<uint8_t> color,
                              std::vector<uint16_t> &indexes) {
-  assert(base_z + z < max_z);
-  assert(dst_x + w <= UINT16_MAX && dst_y + h <= UINT16_MAX);
-  assert(src_x + w <= UINT16_MAX && src_y + h <= UINT16_MAX);
+  assert((size_t)base_z + (size_t)z < max_z);
+  assert(dst.x + w <= UINT16_MAX && dst.y + h <= UINT16_MAX);
+  assert(src.x + w <= UINT16_MAX && src.y + h <= UINT16_MAX);
 
-  uint8_t depth = (base_z + z);
-  /* TODO: use indexed VBO
-   * http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-9-vbo-indexing/
-   */
+  RenderLayerIdx depth = RENDER_LAYER_IDX_MAX - (base_z + z);
+
   assert(vertexes.size() < UINT16_MAX);
   uint16_t i = vertexes.size();
   /* clang-format off */
   vertexes.insert(vertexes.end(), {
     {
-     {(uint16_t) dst_x, (uint16_t) dst_y},
-     {(uint16_t) src_x, (uint16_t) src_y},
-     color, (uint8_t) depth
+     {(uint16_t) dst.x, (uint16_t) dst.y},
+     {(uint16_t) src.x, (uint16_t) src.y},
+     color, depth
     },
     {
-     {(uint16_t) (dst_x+w), (uint16_t) dst_y},
-     {(uint16_t) (src_x+w), (uint16_t) src_y},
-     color, (uint8_t) depth
+     {(uint16_t) (dst.x+w), (uint16_t) dst.y},
+     {(uint16_t) (src.x+w), (uint16_t) src.y},
+     color, depth
     },
     {
-     {(uint16_t)(dst_x+w), (uint16_t)(dst_y+h)},
-     {(uint16_t)(src_x+w), (uint16_t)(src_y+h)},
-     color, (uint8_t) depth
+     {(uint16_t)(dst.x+w), (uint16_t)(dst.y+h)},
+     {(uint16_t)(src.x+w), (uint16_t)(src.y+h)},
+     color, depth
     },
     {
-     {(uint16_t) dst_x, (uint16_t) (dst_y+h)},
-     {(uint16_t) src_x, (uint16_t) (src_y+h)},
-     color, (uint8_t) depth
+     {(uint16_t) dst.x, (uint16_t) (dst.y+h)},
+     {(uint16_t) src.x, (uint16_t) (src.y+h)},
+     color, depth
     }
   });
   indexes.insert(indexes.end(), {
-    i, (uint16_t)(i+1), (uint16_t)(i+2), /* top right triangle */
-    i, (uint16_t)(i+2), (uint16_t)(i+3), /* bottom left triangle */
+    i, (VertexIndex)(i+1), (VertexIndex)(i+2), /* top right triangle */
+    i, (VertexIndex)(i+2), (VertexIndex)(i+3), /* bottom left triangle */
   });
   /* clang-format on */
 }
 
-void RenderContext::DrawRect(uint z, uint x, uint y, uint w, uint h,
-                             vec4<uint8_t> color) {
-  PushQuad(z, x, y, 0, 0, w, h, color, indexes);
+void RenderContext::DrawRect(RenderLayerIdx z, Rect dst, Color color) {
+  PushQuad(z, dst.top_left(), {0, 0}, dst.w, dst.h, color, indexes);
 }
 /*
 void RenderContext::DrawTexture(uint z, uint dst_x, uint dst_y, uint src_x,
                                 uint src_y, uint w, uint h);
 */
 
-void RenderContext::DrawGlyph(uint z, uint dst_x, uint dst_y, Glyph g,
-                              vec4<uint8_t> color) {
-  PushQuad(z, dst_x + g.padding_x, dst_y - g.padding_y, g.x, g.y, g.w, g.h,
-           color, subpx_indexes);
+void RenderContext::DrawGlyph(RenderLayerIdx z, Point dst, Glyph g,
+                              Color color) {
+  PushQuad(z, {dst.x, dst.y - g.padding_y}, {g.x, g.y}, g.w, g.h, color,
+           subpx_indexes);
 }
 
 void RenderContext::Commit(void) {
@@ -172,7 +185,8 @@ void RenderContext::Commit(void) {
   /* TODO: only clear depth buffer */
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  glDisable(GL_BLEND);
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glUseProgram(programs.regular);
   glUniform2f(glGetUniformLocation(programs.regular, "u_texture_size"),
               texture_size.x, texture_size.y);
@@ -198,7 +212,7 @@ void RenderContext::Commit(void) {
   SDL_GL_SwapWindow(window);
 
   /* reset drawing state */
-  base_z = 0;
+  base_z = 2;
   vertexes.clear();
   indexes.clear();
   subpx_indexes.clear();

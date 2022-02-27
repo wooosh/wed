@@ -2,7 +2,6 @@
 
 #include "../Render/RenderContext.hxx"
 /* TODO: move types in Render/Types.hxx */
-#include "Render.hxx"
 
 // only the parent of a view can increase the size of it's region,
 // but a view can shrink it's own region
@@ -10,7 +9,7 @@
 
 struct View {
   /* uses global coords */
-  Render::Rect viewport;
+  Rect viewport;
   /* TODO: should this be passed as a reference? why not just global editor/draw
    * state */
   virtual void draw(RenderContext &) = 0;
