@@ -2,6 +2,7 @@
 #include "../Util/Assert.hxx"
 #include "TileMap.hxx"
 #include <algorithm>
+#include <chrono>
 #include <climits>
 #include <iostream>
 #include <math.h>
@@ -118,7 +119,9 @@ GlyphAtlas GenerateAtlas(std::string font_path, double pt_size) {
 
   /* TODO: fix */
   atlas.line_height = max_height * 1.5;
-
+  std::chrono::duration<double, std::micro> rectpack_time =
+      std::chrono::hours(0);
+  size_t packed = 0;
   for (u_char i = 0; i < UCHAR_MAX; i++) {
     if (!isprint(i))
       /* TODO: assign to unknown char slot */
@@ -135,8 +138,12 @@ GlyphAtlas GenerateAtlas(std::string font_path, double pt_size) {
     if (glyph.w <= 0 || glyph.h <= 0) {
       continue;
     }
-    printf("glyph: %c\n", i);
+    packed++;
+    auto t1 = std::chrono::high_resolution_clock::now();
     Point texture_pos = tilemap.AllocateRect(glyph.w, glyph.h);
+    auto t2 = std::chrono::high_resolution_clock::now();
+    rectpack_time +=
+        std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1);
     glyph.x = texture_pos.x;
     glyph.y = texture_pos.y;
 
@@ -155,6 +162,7 @@ GlyphAtlas GenerateAtlas(std::string font_path, double pt_size) {
     }
   }
 
+  /*
   for (size_t i = 0; i < tilemap.bitmap.size(); i++) {
     for (size_t x = 0; x < atlas.image_w * 3; x += 3) {
       atlas.image[(i * atlas_pitch * tilemap.tile_h) + x] = 0xcc;
@@ -165,7 +173,11 @@ GlyphAtlas GenerateAtlas(std::string font_path, double pt_size) {
     for (size_t x = 0; x < atlas.image_h; x++) {
       atlas.image[(x * atlas_pitch) + i * tilemap.tile_w * 3 + 1] = 0xcc;
     }
-  }
+  }*/
+
+  printf("avg rectpack time %fus\n",
+         (double)rectpack_time.count() / (double)packed);
+  printf("total rectpack time %fus\n", (double)rectpack_time.count());
 
   /* TODO: release font data? or put in struct */
   return atlas;

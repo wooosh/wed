@@ -71,7 +71,7 @@ Point TileMap::AllocateRect(uint w_px, uint h_px) {
     bitmap_damaged[row_idx + y] &= ~write_mask;
   }
 
-  return {(uint)(col_idx * tile_w), (uint)row_idx * tile_h};
+  return {(uint)col_idx * tile_w, (uint)row_idx * tile_h};
 }
 
 bool TileMap::IsRectValid(uint8_t r_epoch, Rect r) {
