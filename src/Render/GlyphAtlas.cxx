@@ -1,5 +1,6 @@
 #include "GlyphAtlas.hxx"
 #include "../Util/Assert.hxx"
+#include "TileMap.hxx"
 #include <algorithm>
 #include <climits>
 #include <iostream>
@@ -12,6 +13,16 @@
 #include "freetype/ftimage.h"
 
 static FT_Library library;
+
+/* TODO: handle bitmaps */
+/* TODO:
+ * - keep track of lowest extent during ASCII tilemap process
+ * - create new tilemap rounded up to to multiple of tile height
+ * - when overflow, create new epoch, clear damaged bitmap
+ * - use ring buffer of glyphs, keep track of glyphs epoch and rect
+ * - when using a non ascii glyph, check the epoch
+ * - check for runs of ascii to skip all of this
+ */
 
 void InitFontRenderer() {
   FT_Error err = FT_Init_FreeType(&library);
@@ -70,6 +81,9 @@ GlyphAtlas GenerateAtlas(std::string font_path, double pt_size) {
     FT_GlyphSlot glyph = face->glyph;
     assume(glyph->bitmap.pixel_mode == FT_PIXEL_MODE_LCD,
            "incorrect pixel mode");
+    // if (glyph->bitmap.width <= 0 || glyph->bitmap.rows <= 0) {
+    //  continue;
+    //}
     /* TODO: preserve fractional part of 26.6 pixel format */
     atlas.glyphs[i].advance = glyph->advance.x >> 6;
 
@@ -83,20 +97,27 @@ GlyphAtlas GenerateAtlas(std::string font_path, double pt_size) {
     max_height = std::max(max_height, glyph->bitmap.rows);
   }
 
-  /* length of texture by num of glyphs */
-  size_t side_len = ceil(sqrt((float)glyphs_present));
+  /* partition texture into 3 parts: ascii/unevictable, unicode pt1, unicode pt2
+   * keep track of lowest extent during building process
+   */
 
-  size_t glyph_row_bytes = side_len * max_width * 3;
-  atlas.image.resize(glyph_row_bytes * max_height * side_len);
+  /* TODO: ascii tilemap for start layout, and separate unicode tilemap */
+  TileMap tilemap((atlas.glyphs['M'].w / 3) + 1, (atlas.glyphs['T'].h / 3) + 1,
+                  64);
+
+  atlas.image_w = tilemap.tile_w * TILEMAP_ROW_BITS;
+  atlas.image_h = tilemap.tile_h * tilemap.bitmap.size();
+
+  atlas.image.resize(atlas.image_w * atlas.image_h * 3);
+
+  /* used for debugging */
+  size_t atlas_pitch = atlas.image_w * 3;
+  for (size_t i = 0; i < atlas.image.size(); i += 3) {
+    atlas.image[i + 2] = 0xff;
+  }
 
   /* TODO: fix */
   atlas.line_height = max_height * 1.5;
-  atlas.image_w = side_len * max_width;
-  atlas.image_h = side_len * max_height;
-
-  /* position indexed by glyph */
-  size_t x_pos = 0;
-  size_t y_pos = 0;
 
   for (u_char i = 0; i < UCHAR_MAX; i++) {
     if (!isprint(i))
@@ -110,28 +131,39 @@ GlyphAtlas GenerateAtlas(std::string font_path, double pt_size) {
     if (err != FT_Err_Ok)
       continue;
 
-    atlas.glyphs[i].x = x_pos * max_width;
-    atlas.glyphs[i].y = y_pos * max_height;
+    Glyph &glyph = atlas.glyphs[i];
+    if (glyph.w <= 0 || glyph.h <= 0) {
+      continue;
+    }
+    printf("glyph: %c\n", i);
+    Point texture_pos = tilemap.AllocateRect(glyph.w, glyph.h);
+    glyph.x = texture_pos.x;
+    glyph.y = texture_pos.y;
 
+    /* copy bitmap */
     FT_Bitmap bitmap = face->glyph->bitmap;
     assume(bitmap.pixel_mode == FT_PIXEL_MODE_LCD, "incorrect pixel mode");
     uint8_t *src = bitmap.buffer;
 
-    size_t row_len_bytes = max_width * side_len * 3;
-    size_t row_start = y_pos * max_height * row_len_bytes;
-    size_t col_offset = x_pos * max_width * 3;
-    uint8_t *dst = atlas.image.data() + row_start + col_offset;
+    uint8_t *dst =
+        atlas.image.data() + atlas_pitch * texture_pos.y + 3 * texture_pos.x;
 
     for (size_t row = 0; row < bitmap.rows; row++) {
       memcpy(dst, src, bitmap.pitch);
-      dst += row_len_bytes;
+      dst += atlas_pitch;
       src += bitmap.pitch;
     }
+  }
 
-    x_pos++;
-    if (x_pos == side_len) {
-      x_pos = 0;
-      y_pos++;
+  for (size_t i = 0; i < tilemap.bitmap.size(); i++) {
+    for (size_t x = 0; x < atlas.image_w * 3; x += 3) {
+      atlas.image[(i * atlas_pitch * tilemap.tile_h) + x] = 0xcc;
+    }
+  }
+
+  for (size_t i = 0; i < TILEMAP_ROW_BITS; i++) {
+    for (size_t x = 0; x < atlas.image_h; x++) {
+      atlas.image[(x * atlas_pitch) + i * tilemap.tile_w * 3 + 1] = 0xcc;
     }
   }
 

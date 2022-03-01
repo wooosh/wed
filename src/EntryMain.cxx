@@ -42,14 +42,14 @@ int main(int argc, char **argv) {
   // LocateFont init
   assume(LocateFontInit(), "failed to init font locator");
   std::optional<std::string> font_path = LocateFontFile(
-      {argv[1], 12.0, FontFaceProperties::WEIGHT_REGULAR,
+      {argv[1], 24.0, FontFaceProperties::WEIGHT_REGULAR,
        FontFaceProperties::STRETCH_MEDIUM, FontFaceProperties::SLANT_NORMAL});
   assume(font_path.has_value(), "couldn't locate font");
 
   // font render init
   InitFontRenderer();
 
-  GlyphAtlas atlas = GenerateAtlas(font_path.value(), 12.0);
+  GlyphAtlas atlas = GenerateAtlas(font_path.value(), 24.0);
 
   // SDL2 init
   int err = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
@@ -86,6 +86,11 @@ int main(int argc, char **argv) {
 
   // rctx.PushTexture(0, 0, 0, 10, 0, atlas.image_w - 10, atlas.image_h);
   rctx.LoadTexture(&atlas.image[0], atlas.image_w, atlas.image_h);
+  rctx.DrawTexture(1, {10, 10}, {0, 0, atlas.image_w, atlas.image_h});
+  rctx.Commit();
+  SDL_Delay(5000);
+
+  std::abort();
 
   TextBuffer tb;
   readFile(tb, argv[2]);
@@ -94,7 +99,7 @@ int main(int argc, char **argv) {
   editor.first_line = 0;
   auto root = ViewRoot(editor);
 
-  for (size_t i = 0; i < 30; i++) {
+  for (size_t i = 0; i < 60; i++) {
     SDL_Delay(1000 / 10);
     editor.first_line++;
     editor.first_line %= 200;

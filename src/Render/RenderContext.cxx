@@ -159,10 +159,10 @@ void RenderContext::PushQuad(RenderLayerIdx z, Point dst, Point src, uint w,
 void RenderContext::DrawRect(RenderLayerIdx z, Rect dst, Color color) {
   PushQuad(z, dst.top_left(), {0, 0}, dst.w, dst.h, color, indexes);
 }
-/*
-void RenderContext::DrawTexture(uint z, uint dst_x, uint dst_y, uint src_x,
-                                uint src_y, uint w, uint h);
-*/
+
+void RenderContext::DrawTexture(RenderLayerIdx z, Point dst, Rect src) {
+  PushQuad(z, dst, src.top_left(), src.w, src.h, {0, 0, 0, 255}, indexes);
+}
 
 void RenderContext::DrawGlyph(RenderLayerIdx z, Point dst, Glyph g,
                               Color color) {
@@ -185,8 +185,8 @@ void RenderContext::Commit(void) {
   /* TODO: only clear depth buffer */
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  glDisable(GL_BLEND);
+  // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glUseProgram(programs.regular);
   glUniform2f(glGetUniformLocation(programs.regular, "u_texture_size"),
               texture_size.x, texture_size.y);
