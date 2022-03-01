@@ -88,9 +88,9 @@ int main(int argc, char **argv) {
   rctx.LoadTexture(&atlas.image[0], atlas.image_w, atlas.image_h);
   rctx.DrawTexture(1, {10, 10}, {0, 0, atlas.image_w, atlas.image_h});
   rctx.Commit();
-  SDL_Delay(5000);
+  SDL_Delay(2000);
 
-  std::abort();
+  // std::abort();
 
   TextBuffer tb;
   readFile(tb, argv[2]);
@@ -99,8 +99,8 @@ int main(int argc, char **argv) {
   editor.first_line = 0;
   auto root = ViewRoot(editor);
 
-  for (size_t i = 0; i < 60; i++) {
-    SDL_Delay(1000 / 10);
+  for (size_t i = 0; i < 1; i++) {
+
     editor.first_line++;
     editor.first_line %= 200;
 
@@ -125,6 +125,7 @@ int main(int argc, char **argv) {
     std::cerr << "fps: "
               << 1000000 / (layout_time.count() + commit_time.count())
               << " fps\n";
+    SDL_Delay(2000);
   }
 
   LocateFontDeinit();

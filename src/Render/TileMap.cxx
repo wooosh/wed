@@ -21,6 +21,7 @@ void TileMap::Clear() {
   }
 }
 
+/* TODO: use atleast_8 */
 Point TileMap::AllocateRect(uint w_px, uint h_px) {
   /* convert px to tiles, rounding upward */
   const uint8_t w_tiles = (w_px + tile_w - 1) / tile_w;
@@ -29,8 +30,6 @@ Point TileMap::AllocateRect(uint w_px, uint h_px) {
   /* TODO: move this check elsewhere */
   assume(w_tiles < 32 && h_tiles < bitmap.size(), "too large for bitmap");
 
-  const Row row_mask = ~(Row)0 << (TILEMAP_ROW_BITS - w_tiles);
-
   Row *row = bitmap.data();
   Row *end = bitmap.data() + bitmap.size();
 
@@ -38,35 +37,41 @@ Point TileMap::AllocateRect(uint w_px, uint h_px) {
   uint8_t rows_matched = 0;
 
   while (row < end && rows_matched < h_tiles) {
-    bool row_match = row_mask == (row_mask & ((*row) << col_idx));
+    /* check if the bitstring at col_idx into the current row has atleast
+     * w_tiles bits set/tiles free */
+    bool row_match = (w_tiles <= __builtin_clz(~(*row << col_idx)));
 
-    if (row_match) {
-      rows_matched++;
-      row++;
-    } else {
-      col_idx++;
-      if (col_idx >= TILEMAP_ROW_BITS) {
-        row++;
-      }
-      col_idx %= TILEMAP_ROW_BITS;
-      /* could use last_state */
-      if (rows_matched != 0) {
-        row -= rows_matched;
-        rows_matched = 0;
-      }
-    }
+    /* if there was no match, move to the next column */
+    col_idx += !row_match;
+
+    row = row
+          /* if we have reached the column limit, move to the next row */
+          + (col_idx == TILEMAP_ROW_BITS)
+          /* if the row did not match, backtrack by the amount of rows we've
+           * matched so far */
+          - (!row_match * rows_matched)
+          /* otherwise, advance the row pointer by one */
+          + row_match;
+
+    /* if the row matched, increment the number of rows matched by one,
+     * otherwise zero it */
+    rows_matched = row_match * (rows_matched + 1);
+
+    /* wrap the column around to zero (compiles to &=) */
+    col_idx %= TILEMAP_ROW_BITS;
   }
-
-  /* set bits */
-  const uint8_t y_tiles = (row - bitmap.data()) - h_tiles;
-  const Row row_write_mask = ~(row_mask >> col_idx);
-  for (uint8_t y = 0; y < h_tiles; y++) {
-    bitmap[y_tiles + y] &= row_write_mask;
-    bitmap_damaged[y_tiles + y] &= row_write_mask;
-  }
-
   /* TODO: if (row == end) */
-  return {(uint)(col_idx * tile_w), (uint)y_tiles * tile_h};
+
+  const uint8_t row_idx = (row - bitmap.data()) - h_tiles;
+
+  /* mark bits as used by setting them to zero */
+  const Row write_mask = (~(Row)0 << (TILEMAP_ROW_BITS - w_tiles)) >> (col_idx);
+  for (uint8_t y = 0; y < h_tiles; y++) {
+    bitmap[row_idx + y] &= ~write_mask;
+    bitmap_damaged[row_idx + y] &= ~write_mask;
+  }
+
+  return {(uint)(col_idx * tile_w), (uint)row_idx * tile_h};
 }
 
 bool TileMap::IsRectValid(uint8_t r_epoch, Rect r) {
