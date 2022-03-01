@@ -86,7 +86,7 @@ GlyphAtlas GenerateAtlas(std::string font_path, double pt_size) {
     //  continue;
     //}
     /* TODO: preserve fractional part of 26.6 pixel format */
-    atlas.glyphs[i].advance = glyph->advance.x >> 6;
+    atlas.glyphs[i].advance = (glyph->advance.x >> 6) + 1;
 
     atlas.glyphs[i].w = glyph->bitmap.width / 3;
     atlas.glyphs[i].h = glyph->bitmap.rows;

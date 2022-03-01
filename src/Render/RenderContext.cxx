@@ -166,8 +166,8 @@ void RenderContext::DrawTexture(RenderLayerIdx z, Point dst, Rect src) {
 
 void RenderContext::DrawGlyph(RenderLayerIdx z, Point dst, Glyph g,
                               Color color) {
-  PushQuad(z, {dst.x, dst.y - g.padding_y}, {g.x, g.y}, g.w, g.h, color,
-           subpx_indexes);
+  PushQuad(z, {dst.x + g.padding_x, dst.y - g.padding_y}, {g.x, g.y}, g.w, g.h,
+           color, subpx_indexes);
 }
 
 void RenderContext::Commit(void) {

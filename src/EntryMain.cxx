@@ -49,7 +49,7 @@ int main(int argc, char **argv) {
   // font render init
   InitFontRenderer();
 
-  GlyphAtlas atlas = GenerateAtlas(font_path.value(), 24.0);
+  GlyphAtlas atlas = GenerateAtlas(font_path.value(), 12.0);
 
   // SDL2 init
   int err = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
@@ -88,9 +88,9 @@ int main(int argc, char **argv) {
   rctx.LoadTexture(&atlas.image[0], atlas.image_w, atlas.image_h);
   rctx.DrawTexture(1, {10, 10}, {0, 0, atlas.image_w, atlas.image_h});
   rctx.Commit();
-  SDL_Delay(2000);
+  // SDL_Delay(2000);
 
-  std::abort();
+  // std::abort();
 
   TextBuffer tb;
   readFile(tb, argv[2]);
