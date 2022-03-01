@@ -39,14 +39,16 @@ Point TileMap::AllocateRect(uint w_px, uint h_px) {
   while (row < end && rows_matched < h_tiles) {
     /* check if the bitstring at col_idx into the current row has atleast
      * w_tiles bits set/tiles free */
-    bool row_match = (w_tiles <= __builtin_clz(~(*row << col_idx)));
+    uint8_t bits_free = __builtin_clz(~(*row << col_idx));
+    bool row_match = (w_tiles <= bits_free);
 
     /* if there was no match, move to the next column */
-    col_idx += !row_match;
+    uint8_t bits_used = __builtin_clz(((*row << col_idx) | (1 >> col_idx)));
+    col_idx += !row_match * (bits_free + bits_used);
 
     row = row
           /* if we have reached the column limit, move to the next row */
-          + (col_idx == TILEMAP_ROW_BITS)
+          + (col_idx >= TILEMAP_ROW_BITS)
           /* if the row did not match, backtrack by the amount of rows we've
            * matched so far */
           - (!row_match * rows_matched)
@@ -58,7 +60,9 @@ Point TileMap::AllocateRect(uint w_px, uint h_px) {
     rows_matched = row_match * (rows_matched + 1);
 
     /* wrap the column around to zero (compiles to &=) */
-    col_idx %= TILEMAP_ROW_BITS;
+    if (col_idx >= TILEMAP_ROW_BITS)
+      col_idx = 0;
+    // col_idx %= TILEMAP_ROW_BITS;
   }
   /* TODO: if (row == end) */
 

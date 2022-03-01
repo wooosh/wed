@@ -143,7 +143,7 @@ GlyphAtlas GenerateAtlas(std::string font_path, double pt_size) {
     Point texture_pos = tilemap.AllocateRect(glyph.w, glyph.h);
     auto t2 = std::chrono::high_resolution_clock::now();
     rectpack_time +=
-        std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1);
+        std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1);
     glyph.x = texture_pos.x;
     glyph.y = texture_pos.y;
 
@@ -175,9 +175,9 @@ GlyphAtlas GenerateAtlas(std::string font_path, double pt_size) {
     }
   }*/
 
-  printf("avg rectpack time %fus\n",
+  printf("avg rectpack time %fns\n",
          (double)rectpack_time.count() / (double)packed);
-  printf("total rectpack time %fus\n", (double)rectpack_time.count());
+  printf("total rectpack time %fns\n", (double)rectpack_time.count());
 
   /* TODO: release font data? or put in struct */
   return atlas;
