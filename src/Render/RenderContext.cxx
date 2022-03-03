@@ -20,7 +20,9 @@ void GLAPIENTRY MessageCallback(GLenum source, GLenum type, GLuint id,
 
 void RenderContext::Init(void) {
   glEnable(GL_DEBUG_OUTPUT);
+#ifndef __APPLE__
   glDebugMessageCallback(MessageCallback, 0);
+#endif  /* __APPLE__ */
 
   programs = LoadShaders();
 
