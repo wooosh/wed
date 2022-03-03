@@ -31,13 +31,13 @@ LocateFontFile(const FontFaceProperties &font_face) {
     return std::nullopt;
   }
 
-  CFStringRef url_str = CFURLGetString(url);
-  url_str = (CFStringRef)CFRetain(url_str);
+  CFStringRef path_str = CFURLCopyFileSystemPath(url, kCFURLPOSIXPathStyle);
+  path_str = (CFStringRef)CFRetain(path_str);
 
-  std::string path(CFStringGetCStringPtr(url_str, kCFStringEncodingUTF8),
-                   CFStringGetLength(url_str));
+  std::string path(CFStringGetCStringPtr(path_str, kCFStringEncodingUTF8),
+                   CFStringGetLength(path_str));
 
-  CFRelease(url_str);
+  CFRelease(path_str);
   CFRelease(font_ref);
   CFRelease(cf_str);
   return path;
