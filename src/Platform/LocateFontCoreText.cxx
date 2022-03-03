@@ -38,7 +38,6 @@ LocateFontFile(const FontFaceProperties font_face &) {
                    CFStringGetLength(url_str));
 
   CFRelease(url_str);
-  CFRelease(url);
   CFRelease(font_ref);
   CFRelease(cf_str);
   return path;
