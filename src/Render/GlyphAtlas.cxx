@@ -1,5 +1,6 @@
 #include "GlyphAtlas.hxx"
 #include "../Util/Assert.hxx"
+#include "BitMatrix2D.hxx"
 #include "TileMap.hxx"
 #include <algorithm>
 #include <chrono>
@@ -103,11 +104,18 @@ GlyphAtlas GenerateAtlas(std::string font_path, double pt_size) {
    */
 
   /* TODO: ascii tilemap for start layout, and separate unicode tilemap */
-  TileMap tilemap((atlas.glyphs['M'].w / 3) + 1, (atlas.glyphs['T'].h / 3) + 1,
-                  64);
 
-  atlas.image_w = tilemap.tile_w * TILEMAP_ROW_BITS;
-  atlas.image_h = tilemap.tile_h * tilemap.bitmap.size();
+  BitMatrix2D<BitMatrix2DFixedAxis::kHeight, uint32_t> map;
+  constexpr uint w_factor = 6;
+  constexpr uint h_factor = 3;
+  uint tile_w = (atlas.glyphs['M'].w + w_factor - 1) / w_factor;
+  uint tile_h = (atlas.glyphs['M'].h + h_factor - 1) / h_factor;
+
+  map.rows.resize(64);
+  map.Fill(0);
+
+  atlas.image_w = tile_w * map.width();
+  atlas.image_h = tile_h * map.height();
 
   atlas.image.resize(atlas.image_w * atlas.image_h * 3);
 
@@ -140,20 +148,29 @@ GlyphAtlas GenerateAtlas(std::string font_path, double pt_size) {
     }
     packed++;
     auto t1 = std::chrono::high_resolution_clock::now();
-    Point texture_pos = tilemap.AllocateRect(glyph.w, glyph.h);
+    const uint8_t w_tiles = (glyph.w + tile_w - 1) / tile_w;
+    const uint8_t h_tiles = (glyph.h + tile_h - 1) / tile_h;
+    auto texture_posr = map.FindUnsetRect(w_tiles, h_tiles);
+    if (!texture_posr)
+      std::abort();
+
+    auto texture_pos = *texture_posr;
+    // printf("%zu %zu %u %u\n", texture_pos.x, texture_pos.y, w_tiles,
+    // h_tiles);
+    map.SetRect({(uint)texture_pos.x, (uint)texture_pos.y, w_tiles, h_tiles});
+
     auto t2 = std::chrono::high_resolution_clock::now();
     rectpack_time +=
         std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1);
-    glyph.x = texture_pos.x;
-    glyph.y = texture_pos.y;
+    glyph.x = texture_pos.x * tile_w;
+    glyph.y = texture_pos.y * tile_h;
 
     /* copy bitmap */
     FT_Bitmap bitmap = face->glyph->bitmap;
     assume(bitmap.pixel_mode == FT_PIXEL_MODE_LCD, "incorrect pixel mode");
     uint8_t *src = bitmap.buffer;
 
-    uint8_t *dst =
-        atlas.image.data() + atlas_pitch * texture_pos.y + 3 * texture_pos.x;
+    uint8_t *dst = atlas.image.data() + atlas_pitch * glyph.y + 3 * glyph.x;
 
     for (size_t row = 0; row < bitmap.rows; row++) {
       memcpy(dst, src, bitmap.pitch);
@@ -162,16 +179,30 @@ GlyphAtlas GenerateAtlas(std::string font_path, double pt_size) {
     }
   }
 
-  /*
-  for (size_t i = 0; i < tilemap.bitmap.size(); i++) {
-    for (size_t x = 0; x < atlas.image_w * 3; x += 3) {
-      atlas.image[(i * atlas_pitch * tilemap.tile_h) + x] = 0xcc;
+  printf("%u %u\n", tile_w, tile_h);
+
+  for (size_t i = 0; i < map.width(); i++) {
+    for (size_t x = 0; x < atlas.image_h; x++) {
+      atlas.image[i * tile_w * 3 + x * atlas_pitch] = 0xcc;
     }
   }
 
-  for (size_t i = 0; i < TILEMAP_ROW_BITS; i++) {
+  for (size_t i = 0; i < map.height(); i++) {
+    for (size_t x = 0; x < atlas.image_w; x++) {
+      atlas.image[i * tile_h * atlas_pitch + x * 3 + 1] = 0xcc;
+    }
+  }
+
+  /*
+  for (size_t i = 0; i < map.width(); i++) {
+    for (size_t x = 0; x < atlas.image_w * 3; x += 3) {
+      atlas.image[(i * atlas_pitch * tile_w) + x] = 0xcc;
+    }
+  }
+
+  for (size_t i = 0; i < map.height(); i++) {
     for (size_t x = 0; x < atlas.image_h; x++) {
-      atlas.image[(x * atlas_pitch) + i * tilemap.tile_w * 3 + 1] = 0xcc;
+      atlas.image[(x * atlas_pitch) + i * tile_h * 3 + 1] = 0xcc;
     }
   }*/
 

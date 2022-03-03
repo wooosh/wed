@@ -88,9 +88,9 @@ int main(int argc, char **argv) {
   rctx.LoadTexture(&atlas.image[0], atlas.image_w, atlas.image_h);
   rctx.DrawTexture(1, {10, 10}, {0, 0, atlas.image_w, atlas.image_h});
   rctx.Commit();
-  // SDL_Delay(2000);
+  SDL_Delay(2000);
 
-  // std::abort();
+  std::abort();
 
   TextBuffer tb;
   readFile(tb, argv[2]);

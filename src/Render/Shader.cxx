@@ -40,8 +40,8 @@ static std::string_view fragment_shader = R"(
 
   void main() {
     /* TODO: fix texture blending */
-    o_color = v_color; // *
-    //o_color = texture(texture1, v_texture_pos/u_texture_size);
+    //o_color = v_color; // *
+    o_color = texture(texture1, v_texture_pos/u_texture_size);
     o_alpha = vec4(1, 1, 1, 1);
   }
 )";
