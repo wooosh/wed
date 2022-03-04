@@ -1,6 +1,7 @@
 #include "Platform/LocateFont.hxx"
 #include "Render/RenderContext.hxx"
 #include "SDL.h"
+#include "src/Render/RenderFont.hxx"
 #include <climits>
 #define GL_GLEXT_PROTOTYPES
 #include "Render/GlyphAtlas.hxx"
@@ -49,7 +50,7 @@ int main(int argc, char **argv) {
   // font render init
   InitFontRenderer();
 
-  GlyphAtlas atlas = GenerateAtlas(font_path.value(), 12.0);
+  // GlyphAtlas atlas = GenerateAtlas(font_path.value(), 12.0);
 
   // SDL2 init
   int err = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
@@ -79,23 +80,25 @@ int main(int argc, char **argv) {
   int w, h;
   SDL_GetWindowSize(window, &w, &h);
   rctx.Init();
-
-  std::cerr << atlas.image_w << " " << atlas.image_h << " "
-            << atlas.image_h * atlas.image_w * 3 << " " << atlas.image.size()
-            << "\n";
+  auto font = LoadFont(&rctx, font_path.value(), 12.0);
+  assume(font, "could not render font");
 
   // rctx.PushTexture(0, 0, 0, 10, 0, atlas.image_w - 10, atlas.image_h);
-  rctx.LoadTexture(&atlas.image[0], atlas.image_w, atlas.image_h);
-  rctx.DrawTexture(1, {10, 10}, {0, 0, atlas.image_w, atlas.image_h});
+  // rctx.LoadTexture(&atlas.image[0], atlas.image_w, atlas.image_h);
+  // rctx.DrawTexture(1, {10, 10}, {0, 0, atlas.image_w, atlas.image_h});
+  printf("atlas %u %u\n", font->atlas.size.x, font->atlas.size.y);
+  rctx.DrawRect(0, {0, 0, 200, 200}, RGB(0x00ff00));
+  rctx.PushQuad(1, {10, 10}, {0, 0}, font->atlas.size.x, font->atlas.size.y,
+                RGB(0x111111), font->indices);
   rctx.Commit();
   SDL_Delay(2000);
 
-  std::abort();
+  // std::abort();
 
   TextBuffer tb;
   readFile(tb, argv[2]);
 
-  auto editor = ViewEditor(atlas, tb);
+  auto editor = ViewEditor(*font, tb);
   editor.first_line = 0;
   auto root = ViewRoot(editor);
 

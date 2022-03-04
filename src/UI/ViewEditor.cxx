@@ -1,4 +1,5 @@
 #include "ViewEditor.hxx"
+#include "SDL_opengl_glext.h"
 #include <cassert>
 #include <chrono>
 #include <iostream>
@@ -68,16 +69,18 @@ void ViewEditor::draw(RenderContext &render) {
 
 void ViewEditor::drawRun(RenderContext &render, uint x, uint y,
                          const std::string &run) {
+  (void)render;
   /* TODO: drawText should not take a cstr */
   auto t1 = std::chrono::high_resolution_clock::now();
-  uint pos = x;
+  float pos = x;
   for (size_t i = 0; i < run.size(); i++) {
     if (isprint(run[i])) {
-      render.DrawGlyph(LayerText, {pos, y + (uint)font.line_height},
-                       font.glyphs[run[i]], RGB(0x111111));
+      font.DrawGlyph(LayerText, {(uint)pos, y + (uint)font.line_height}, run[i],
+                     RGB(0x111111));
       pos += font.glyphs[run[i]].advance;
     }
   }
+
   auto t2 = std::chrono::high_resolution_clock::now();
 
   std::chrono::duration<double, std::micro> run_time =

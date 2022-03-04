@@ -54,7 +54,8 @@ srcs += [
   'src/Render/Shader.cxx',
   'src/Render/RenderContext.cxx',
   'src/Render/GlyphAtlas.cxx',
-  'src/Render/TileMap.cxx'
+  'src/Render/TileMap.cxx',
+  'src/Render/RenderFont.cxx'
 ]
 
 # UI

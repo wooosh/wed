@@ -1,6 +1,7 @@
 #include "RenderContext.hxx"
 #include "Shader.hxx"
 #include "src/Render/Types.hxx"
+#include "src/Util/Assert.hxx"
 #include <cassert>
 #include <cstdint>
 
@@ -77,22 +78,6 @@ void RenderContext::UpdateProjection() {
     {0.0f,   0.0f,    -2.0f/r, 0.0f},
     {-1.0f,  1.0f,    -1.0f,   1.0f}
   }};
-
-  /*
-  float f = max_z;
-  float n = 1.00f;
-  
-  r = f - n;*/
-
-  /* clang-format off */
-  
-  /*
-  projection_matrix = {{
-    {2.0f/w, 0.0f,    0.0f,    0.0f},
-    {0.0f,   2.0f/-h, 0.0f,    0.0f},
-    {0.0f,   0.0f,    -2.0f/r, 0.0f},
-    {-1.0f,  1.0f,    -(f+n)/r,   1.0f}
-  }};*/
   /* clang-format on */
 }
 
@@ -115,9 +100,63 @@ void RenderContext::LoadTexture(const uint8_t *data, size_t w, size_t h) {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 }
 
+static GLenum TextureFormatToOpenGLEnum(GPUTexture::Format format) {
+  switch (format) {
+  case GPUTexture::Format::kGrayscale:
+    return GL_LUMINANCE;
+  case GPUTexture::Format::kRGB:
+    return GL_RGB;
+  case GPUTexture::Format::kRGBA:
+    return GL_RGBA;
+  }
+  unreachable("unknown enum value");
+}
+
+GPUTexture RenderContext::CreateTexture(GPUTexture::Format format, uint w,
+                                        uint h, uint8_t *data) {
+  GPUTexture texture;
+  texture.size = {w, h};
+  texture.format = {format};
+
+  glGenTextures(1, &texture.id);
+  glBindTexture(GL_TEXTURE_2D, texture.id);
+
+  glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0,
+               TextureFormatToOpenGLEnum(format), GL_UNSIGNED_BYTE, data);
+
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+  return texture;
+}
+
+void RenderContext::ReallocTexture(GPUTexture &texture, uint w, uint h,
+                                   uint8_t *data) {
+  glBindTexture(GL_TEXTURE_2D, texture.id);
+  glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
+               TextureFormatToOpenGLEnum(texture.format), GL_UNSIGNED_BYTE,
+               data);
+}
+
+void RenderContext::CopyIntoTexture(GPUTexture &texture, Rect dst,
+                                    uint8_t *data) {
+  /* TODO: mismatch between GPuTexture.format and how opengl works, because you
+   * can upload data to a texture in any format, regardless of whether or not
+   * the two formats match */
+  glBindTexture(GL_TEXTURE_2D, texture.id);
+  glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+  glTexSubImage2D(GL_TEXTURE_2D, 0, dst.x, dst.y, dst.w, dst.h,
+                  TextureFormatToOpenGLEnum(texture.format), GL_UNSIGNED_BYTE,
+                  data);
+}
+
 void RenderContext::PushQuad(RenderLayerIdx z, Point dst, Point src, uint w,
                              uint h, vec4<uint8_t> color,
-                             std::vector<uint16_t> &indexes) {
+                             std::vector<uint16_t> *indexes) {
   assert((size_t)base_z + (size_t)z < max_z);
   assert(dst.x + w <= UINT16_MAX && dst.y + h <= UINT16_MAX);
   assert(src.x + w <= UINT16_MAX && src.y + h <= UINT16_MAX);
@@ -149,7 +188,7 @@ void RenderContext::PushQuad(RenderLayerIdx z, Point dst, Point src, uint w,
      color, depth
     }
   });
-  indexes.insert(indexes.end(), {
+  indexes->insert(indexes->end(), {
     i, (VertexIndex)(i+1), (VertexIndex)(i+2), /* top right triangle */
     i, (VertexIndex)(i+2), (VertexIndex)(i+3), /* bottom left triangle */
   });
@@ -157,17 +196,17 @@ void RenderContext::PushQuad(RenderLayerIdx z, Point dst, Point src, uint w,
 }
 
 void RenderContext::DrawRect(RenderLayerIdx z, Rect dst, Color color) {
-  PushQuad(z, dst.top_left(), {0, 0}, dst.w, dst.h, color, indexes);
+  PushQuad(z, dst.top_left(), {0, 0}, dst.w, dst.h, color, &indexes);
 }
 
 void RenderContext::DrawTexture(RenderLayerIdx z, Point dst, Rect src) {
-  PushQuad(z, dst, src.top_left(), src.w, src.h, {0, 0, 0, 255}, indexes);
+  PushQuad(z, dst, src.top_left(), src.w, src.h, {0, 0, 0, 255}, &indexes);
 }
 
 void RenderContext::DrawGlyph(RenderLayerIdx z, Point dst, Glyph g,
                               Color color) {
   PushQuad(z, {dst.x + g.padding_x, dst.y - g.padding_y}, {g.x, g.y}, g.w, g.h,
-           color, subpx_indexes);
+           color, &subpx_indexes);
 }
 
 void RenderContext::Commit(void) {
@@ -196,17 +235,35 @@ void RenderContext::Commit(void) {
   glDrawElements(GL_TRIANGLES, indexes.size(), GL_UNSIGNED_SHORT,
                  indexes.data());
 
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC1_COLOR, GL_ONE_MINUS_SRC1_COLOR);
-  glUseProgram(programs.subpx);
-  glUniform2f(glGetUniformLocation(programs.subpx, "u_texture_size"),
-              texture_size.x, texture_size.y);
-  glUniformMatrix4fv(
-      glGetUniformLocation(programs.subpx, "u_projection_matrix"), 1, GL_FALSE,
-      (const GLfloat *)projection_matrix.data);
-
-  glDrawElements(GL_TRIANGLES, subpx_indexes.size(), GL_UNSIGNED_SHORT,
-                 subpx_indexes.data());
+  for (auto indices : indices2) {
+    printf("vec size %zu\n", indices.indices->size());
+    if (indices.indices->size() <= 0)
+      continue;
+    printf("x\n");
+    GLuint program;
+    if (indices.subpixel) {
+      glEnable(GL_BLEND);
+      glBlendFunc(GL_SRC1_COLOR, GL_ONE_MINUS_SRC1_COLOR);
+      program = programs.subpx;
+    } else {
+      glDisable(GL_BLEND);
+      program = programs.regular;
+    }
+    glBindTexture(GL_TEXTURE_2D, indices.texture.id);
+    printf("1\n");
+    glUseProgram(program);
+    printf("2\n");
+    glUniform2f(glGetUniformLocation(program, "u_texture_size"),
+                indices.texture.size.x, indices.texture.size.y);
+    printf("3\n");
+    glUniformMatrix4fv(glGetUniformLocation(program, "u_projection_matrix"), 1,
+                       GL_FALSE, (const GLfloat *)projection_matrix.data);
+    printf("4\n");
+    glDrawElements(GL_TRIANGLES, indices.indices->size(), GL_UNSIGNED_SHORT,
+                   indices.indices->data());
+    printf("5\n");
+    indices.indices->clear();
+  }
 
   /* flush to gpu */
   SDL_GL_SwapWindow(window);

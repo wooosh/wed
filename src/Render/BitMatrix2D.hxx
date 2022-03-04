@@ -9,22 +9,9 @@
 /* axis size BitMatrixFixedDimension */
 enum class BitMatrix2DFixedAxis { kWidth, kHeight };
 
-void printBits(size_t const size, void const *const ptr) {
-  unsigned char *b = (unsigned char *)ptr;
-  unsigned char byte;
-  int i, j;
-
-  for (i = size - 1; i >= 0; i--) {
-    for (j = 7; j >= 0; j--) {
-      byte = (b[i] >> j) & 1;
-      printf("%u", byte);
-    }
-  }
-  puts("");
-}
-
 template <BitMatrix2DFixedAxis order, typename FixedAxis> struct BitMatrix2D {
   constexpr static uint8_t major_len = std::numeric_limits<FixedAxis>::digits;
+  constexpr static BitMatrix2DFixedAxis axis = order;
   using size_type = size_t;
 
   std::vector<FixedAxis> rows;
@@ -49,6 +36,17 @@ template <BitMatrix2DFixedAxis order, typename FixedAxis> struct BitMatrix2D {
     const FixedAxis v = value && ~(FixedAxis)0;
     for (FixedAxis &x : rows) {
       x = v;
+    }
+  }
+
+  void Resize(size_t new_size) {
+    size_t original_size = rows.size();
+    rows.resize(new_size);
+
+    if (original_size > new_size) {
+      for (size_t i = original_size; i < new_size; i++) {
+        rows[i] = 0;
+      }
     }
   }
 
@@ -98,10 +96,6 @@ template <BitMatrix2DFixedAxis order, typename FixedAxis> struct BitMatrix2D {
       run_len = is_match * (run_len + 1);
       minor_idx *= (q > minor_idx);
     }
-
-    // for (size_t i = 0; i < rows.size(); i++) {
-    //  printf("%o\n", rows[i]);
-    //}
 
     /* TODO: will exit early, fix */
     if (row == end) {

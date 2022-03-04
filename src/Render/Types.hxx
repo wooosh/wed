@@ -1,10 +1,19 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <sys/types.h>
+#include <type_traits>
 
 #define GL_GLEXT_PROTOTYPES
 #include "SDL_opengl.h"
+
+/* TODO: move to Util */
+
+template <typename T> T DivideRoundUp(T lhs, T rhs) {
+  static_assert(std::is_integral_v<T>);
+  return lhs / rhs + (lhs % rhs != 0);
+}
 
 template <typename T> struct vec2 { T x, y; };
 
@@ -38,6 +47,12 @@ constexpr Color RGBA(uint32_t lit) {
 constexpr Color RGB(uint32_t lit) {
   return {(uint8_t)(lit >> 16), (uint8_t)(lit >> 8), (uint8_t)(lit), 255};
 }
+
+struct GPUTexture {
+  GLuint id;
+  vec2<uint> size;
+  enum class Format { kRGB, kRGBA, kGrayscale } format;
+};
 
 enum ShaderAttribute {
   SHADER_SCREEN_COORD,

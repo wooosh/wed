@@ -28,6 +28,12 @@
 typedef uint16_t VertexIndex;
 
 struct RenderContext {
+  struct Indices {
+    GPUTexture texture;
+    bool subpixel;
+    std::vector<uint16_t> *indices;
+  };
+
   SDL_Window *window;
   uint win_w, win_h;
 
@@ -39,6 +45,7 @@ struct RenderContext {
   vec2<uint16_t> texture_size;
 
   std::vector<Vertex> vertexes;
+  std::vector<Indices> indices2;
   std::vector<VertexIndex> indexes;
   std::vector<VertexIndex> subpx_indexes;
 
@@ -62,10 +69,24 @@ struct RenderContext {
   void UpdateProjection();
 
   /* assumes RGB format TODO: fix */
+  /* TODO: deprecate */
   void LoadTexture(const uint8_t *data, size_t w, size_t h);
 
+  /* TODO: destructor? make members of GPUTexture? refcount/non-movable/ */
+
+  /* data may be NULL for an unitinitalized texture */
+  static GPUTexture CreateTexture(GPUTexture::Format, uint w, uint h,
+                                  uint8_t *data);
+  /* reallocates the storage of a texture, destroying the old contents, reading
+   * the new contents from data if non-null
+   *
+   * data may be NULL for an unitinitalized texture */
+  static void ReallocTexture(GPUTexture &, uint w, uint h, uint8_t *data);
+  /* data must not be null */
+  static void CopyIntoTexture(GPUTexture &, Rect dst, uint8_t *data);
+
   void PushQuad(RenderLayerIdx z, Point dst, Point src, uint w, uint h,
-                vec4<uint8_t> color, std::vector<uint16_t> &indexes);
+                vec4<uint8_t> color, std::vector<uint16_t> *indexes);
 
   void DrawRect(RenderLayerIdx z, Rect dst, Color color);
 

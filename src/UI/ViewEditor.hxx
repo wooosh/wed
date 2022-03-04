@@ -1,16 +1,17 @@
 #pragma once
 
+#include "../Render/RenderFont.hxx"
 #include "../TextBuffer/TextBuffer.hxx"
 #include "View.hxx"
 
 struct ViewEditor : View {
-  GlyphAtlas &font;
+  RenderFont &font;
   TextBuffer &buffer;
   size_t first_line;
 
   double draw_time;
 
-  ViewEditor(GlyphAtlas &font, TextBuffer &buffer)
+  ViewEditor(RenderFont &font, TextBuffer &buffer)
       : font(font), buffer(buffer){};
 
   virtual void draw(RenderContext &render);
