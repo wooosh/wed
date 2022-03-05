@@ -23,7 +23,7 @@ void RenderContext::Init(void) {
   glEnable(GL_DEBUG_OUTPUT);
 #ifndef __APPLE__
   glDebugMessageCallback(MessageCallback, 0);
-#endif  /* __APPLE__ */
+#endif /* __APPLE__ */
 
   programs = LoadShaders();
 
@@ -33,23 +33,7 @@ void RenderContext::Init(void) {
   glBindVertexArray(vao);
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
-  glEnableVertexAttribArray(SHADER_SCREEN_COORD);
-  glEnableVertexAttribArray(SHADER_TEXTURE_COORD);
-  glEnableVertexAttribArray(SHADER_COLOR);
-  glEnableVertexAttribArray(SHADER_DEPTH);
-
-  glVertexAttribPointer(SHADER_SCREEN_COORD, 2, GL_SHORT, false, sizeof(Vertex),
-                        (void *)offsetof(Vertex, screen_coord));
-
-  glVertexAttribPointer(SHADER_TEXTURE_COORD, 2, GL_SHORT, false,
-                        sizeof(Vertex),
-                        (void *)offsetof(Vertex, texture_coord));
-
-  glVertexAttribPointer(SHADER_COLOR, 4, GL_UNSIGNED_BYTE, true, sizeof(Vertex),
-                        (void *)offsetof(Vertex, color));
-
-  glVertexAttribPointer(SHADER_DEPTH, 1, GL_UNSIGNED_BYTE, true, sizeof(Vertex),
-                        (void *)offsetof(Vertex, depth));
+  BindVBOAttribs();
 
   /* default screen color is red */
   glClearColor(0.0, 0.0, 0.0, 1.0);
@@ -238,10 +222,8 @@ void RenderContext::Commit(void) {
                  indexes.data());
 
   for (auto indices : indices2) {
-    printf("vec size %zu\n", indices.indices->size());
     if (indices.indices->size() <= 0)
       continue;
-    printf("x\n");
     GLuint program;
     if (indices.subpixel) {
       glEnable(GL_BLEND);
@@ -252,18 +234,13 @@ void RenderContext::Commit(void) {
       program = programs.regular;
     }
     glBindTexture(GL_TEXTURE_2D, indices.texture.id);
-    printf("1\n");
     glUseProgram(program);
-    printf("2\n");
     glUniform2f(glGetUniformLocation(program, "u_texture_size"),
                 indices.texture.size.x, indices.texture.size.y);
-    printf("3\n");
     glUniformMatrix4fv(glGetUniformLocation(program, "u_projection_matrix"), 1,
                        GL_FALSE, (const GLfloat *)projection_matrix.data);
-    printf("4\n");
     glDrawElements(GL_TRIANGLES, indices.indices->size(), GL_UNSIGNED_SHORT,
                    indices.indices->data());
-    printf("5\n");
     indices.indices->clear();
   }
 

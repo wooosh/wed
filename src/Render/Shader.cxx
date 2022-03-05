@@ -5,27 +5,20 @@
 #include <string>
 #include <string_view>
 
-static std::string_view vertex_shader = R"(
-  #version 330 core
-
-  in vec2 i_screen_coord;
-  in vec2 i_texture_coord;
-  in vec4 i_color;
-  in float i_depth;
-
+static std::string vertex_shader = R"(
   out vec2 v_texture_pos;
   out vec4 v_color;
 
   uniform mat4 u_projection_matrix;
 
   void main() {
-      gl_Position = u_projection_matrix * vec4(i_screen_coord, -i_depth, 1.0);
-      v_texture_pos = i_texture_coord;
-      v_color = i_color;
+      gl_Position = u_projection_matrix * vec4(screen_coord, -depth, 1.0);
+      v_texture_pos = texture_coord;
+      v_color = color;
   }
 )";
 
-static std::string_view fragment_shader = R"(
+static std::string fragment_shader = R"(
   #version 330 core
 
   in vec2 v_texture_pos;
@@ -46,7 +39,7 @@ static std::string_view fragment_shader = R"(
   }
 )";
 
-static std::string_view subpx_fragment_shader = R"(
+static std::string subpx_fragment_shader = R"(
   /*
   * Copyright (c) 2020 Chad Brokaw
   *
@@ -151,7 +144,7 @@ static std::string_view subpx_fragment_shader = R"(
   }
 )";
 
-static void CompileShader(GLuint shader_id, std::string_view shader_source) {
+static void CompileShader(GLuint shader_id, std::string &shader_source) {
   const char *shader_data = shader_source.data();
   const int shader_len = shader_source.size();
 
@@ -179,24 +172,20 @@ ShaderPrograms LoadShaders(void) {
   fs = glCreateShader(GL_FRAGMENT_SHADER);
   subpx_fs = glCreateShader(GL_FRAGMENT_SHADER);
 
-  CompileShader(vs, vertex_shader);
+  std::string vert_shader =
+      "#version 330 core\n" + GenerateVertexShaderHeader() + vertex_shader;
+  std::cerr << vert_shader << "\n";
+  CompileShader(vs, vert_shader);
   glAttachShader(programs.regular, vs);
   glAttachShader(programs.subpx, vs);
 
   CompileShader(fs, fragment_shader);
   glAttachShader(programs.regular, fs);
+  glLinkProgram(programs.regular);
 
   CompileShader(subpx_fs, subpx_fragment_shader);
   glAttachShader(programs.subpx, subpx_fs);
-
-  GLuint progs[2] = {programs.regular, programs.subpx};
-  for (size_t i = 0; i < 2; i++) {
-    glBindAttribLocation(progs[i], SHADER_SCREEN_COORD, "i_screen_coord");
-    glBindAttribLocation(progs[i], SHADER_TEXTURE_COORD, "i_texture_coord");
-    glBindAttribLocation(progs[i], SHADER_COLOR, "i_color");
-    glBindAttribLocation(progs[i], SHADER_DEPTH, "i_depth");
-    glLinkProgram(progs[i]);
-  }
+  glLinkProgram(programs.subpx);
 
   return programs;
 }

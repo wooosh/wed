@@ -15,13 +15,28 @@ template <typename T> T DivideRoundUp(T lhs, T rhs) {
   return lhs / rhs + (lhs % rhs != 0);
 }
 
-template <typename T> struct vec2 { T x, y; };
+template <typename T> struct vec2 {
+  using value_type = T;
+  constexpr static size_t size = 2;
+  T x, y;
+};
 
-template <typename T> struct vec3 { T x, y, z; };
+template <typename T> struct vec3 {
+  using value_type = T;
+  constexpr static size_t size = 3;
+  T x, y, z;
+};
 
-template <typename T> struct vec4 { T x, y, z, w; };
+template <typename T> struct vec4 {
+  using value_type = T;
+  constexpr static size_t size = 4;
+  T x, y, z, w;
+};
 
-template <typename T> struct mat4 { T data[4][4]; };
+template <typename T> struct mat4 {
+  using value_type = T;
+  T data[4][4];
+};
 
 struct Point {
   uint x, y;
@@ -66,10 +81,12 @@ typedef uint8_t RenderLayerIdx;
 #define RENDER_LAYER_IDX_GLTYPE GL_UNSIGNED_BYTE
 
 static_assert(sizeof(GLshort) == sizeof(uint16_t), "assuming short is 2 bytes");
+/*
 struct Vertex {
   vec2<uint16_t> screen_coord;
   vec2<uint16_t> texture_coord;
   vec4<uint8_t> color;
   RenderLayerIdx depth;
-  /* TODO: merge alpha and texture coordinates on subpx?*/
-};
+};*/
+
+#include "VertexFormat.hxx"

@@ -4,7 +4,7 @@ project('editor', 'cpp',
 	'cpp_std=c++20',
 	'werror=true',
 	'warning_level=3',
-	'b_sanitize=address'
+	#'b_sanitize=address'
   ])
 
 deps = [
@@ -56,7 +56,8 @@ srcs += [
   'src/Render/RenderContext.cxx',
   'src/Render/GlyphAtlas.cxx',
   'src/Render/TileMap.cxx',
-  'src/Render/RenderFont.cxx'
+  'src/Render/RenderFont.cxx',
+  'src/Render/VertexFormat.cxx'
 ]
 
 # UI
