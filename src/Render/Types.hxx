@@ -69,24 +69,7 @@ struct GPUTexture {
   enum class Format { kRGB, kRGBA, kGrayscale } format;
 };
 
-enum ShaderAttribute {
-  SHADER_SCREEN_COORD,
-  SHADER_TEXTURE_COORD,
-  SHADER_COLOR,
-  SHADER_DEPTH,
-};
-
 typedef uint8_t RenderLayerIdx;
 #define RENDER_LAYER_IDX_MAX UINT8_MAX
-#define RENDER_LAYER_IDX_GLTYPE GL_UNSIGNED_BYTE
-
-static_assert(sizeof(GLshort) == sizeof(uint16_t), "assuming short is 2 bytes");
-/*
-struct Vertex {
-  vec2<uint16_t> screen_coord;
-  vec2<uint16_t> texture_coord;
-  vec4<uint8_t> color;
-  RenderLayerIdx depth;
-};*/
 
 #include "VertexFormat.hxx"

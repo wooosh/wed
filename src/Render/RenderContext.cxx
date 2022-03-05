@@ -48,6 +48,17 @@ void RenderContext::Init(void) {
 
   /* set the first texture unit as active */
   glActiveTexture(GL_TEXTURE0);
+
+  static uint8_t backing_texture[4] = {0xff, 0xff, 0xff, 0xff};
+  rect_batch = NewBatch(
+      {CreateTexture(GPUTexture::Format::kGrayscale, 1, 1, backing_texture),
+       false,
+       {}});
+}
+
+RenderContext::Batch *RenderContext::NewBatch(Batch b) {
+  batches.push_back(b);
+  return &batches.back();
 }
 
 void RenderContext::UpdateProjection() {
@@ -65,25 +76,6 @@ void RenderContext::UpdateProjection() {
     {-1.0f,  1.0f,    -1.0f,   1.0f}
   }};
   /* clang-format on */
-}
-
-void RenderContext::LoadTexture(const uint8_t *data, size_t w, size_t h) {
-  texture_size.x = w;
-  texture_size.y = h;
-
-  glGenTextures(1, &texture);
-  glBindTexture(GL_TEXTURE_2D, texture);
-
-  /* disable alignment since rgb data is not aligned to 4 byte boundary */
-  glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE,
-               data);
-
-  /* use nearest neighbor so subpixels don't get messed up */
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 }
 
 static GLenum TextureFormatToOpenGLEnum(GPUTexture::Format format) {
@@ -140,9 +132,8 @@ void RenderContext::CopyIntoTexture(GPUTexture &texture, Rect dst,
                   data);
 }
 
-void RenderContext::PushQuad(RenderLayerIdx z, Point dst, Point src, uint w,
-                             uint h, vec4<uint8_t> color,
-                             std::vector<uint16_t> *indexes) {
+void RenderContext::PushQuad(Batch *batch, RenderLayerIdx z, Point dst,
+                             Point src, uint w, uint h, Color color) {
   assert((size_t)base_z + (size_t)z < max_z);
   assert(dst.x + w <= UINT16_MAX && dst.y + h <= UINT16_MAX);
   assert(src.x + w <= UINT16_MAX && src.y + h <= UINT16_MAX);
@@ -174,7 +165,7 @@ void RenderContext::PushQuad(RenderLayerIdx z, Point dst, Point src, uint w,
      color, depth
     }
   });
-  indexes->insert(indexes->end(), {
+  batch->indices.insert(batch->indices.end(), {
     i, (VertexIndex)(i+1), (VertexIndex)(i+2), /* top right triangle */
     i, (VertexIndex)(i+2), (VertexIndex)(i+3), /* bottom left triangle */
   });
@@ -182,17 +173,7 @@ void RenderContext::PushQuad(RenderLayerIdx z, Point dst, Point src, uint w,
 }
 
 void RenderContext::DrawRect(RenderLayerIdx z, Rect dst, Color color) {
-  PushQuad(z, dst.top_left(), {0, 0}, dst.w, dst.h, color, &indexes);
-}
-
-void RenderContext::DrawTexture(RenderLayerIdx z, Point dst, Rect src) {
-  PushQuad(z, dst, src.top_left(), src.w, src.h, {0, 0, 0, 255}, &indexes);
-}
-
-void RenderContext::DrawGlyph(RenderLayerIdx z, Point dst, Glyph g,
-                              Color color) {
-  PushQuad(z, {dst.x + g.padding_x, dst.y - g.padding_y}, {g.x, g.y}, g.w, g.h,
-           color, &subpx_indexes);
+  PushQuad(rect_batch, z, dst.top_left(), {0, 0}, dst.w, dst.h, color);
 }
 
 void RenderContext::Commit(void) {
@@ -210,46 +191,40 @@ void RenderContext::Commit(void) {
   /* TODO: only clear depth buffer */
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  glDisable(GL_BLEND);
-  // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-  glUseProgram(programs.regular);
-  glUniform2f(glGetUniformLocation(programs.regular, "u_texture_size"),
-              texture_size.x, texture_size.y);
-  glUniformMatrix4fv(
-      glGetUniformLocation(programs.regular, "u_projection_matrix"), 1,
-      GL_FALSE, (const GLfloat *)projection_matrix.data);
-  glDrawElements(GL_TRIANGLES, indexes.size(), GL_UNSIGNED_SHORT,
-                 indexes.data());
+  glEnable(GL_BLEND);
 
-  for (auto indices : indices2) {
-    if (indices.indices->size() <= 0)
+  for (auto batch : batches) {
+    if (batch.indices.size() <= 0)
       continue;
     GLuint program;
-    if (indices.subpixel) {
-      glEnable(GL_BLEND);
+    if (batch.subpixel) {
       glBlendFunc(GL_SRC1_COLOR, GL_ONE_MINUS_SRC1_COLOR);
       program = programs.subpx;
     } else {
-      glDisable(GL_BLEND);
+      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
       program = programs.regular;
     }
-    glBindTexture(GL_TEXTURE_2D, indices.texture.id);
+    glBindTexture(GL_TEXTURE_2D, batch.texture.id);
+
+    /* TODO: if last_program != program */
     glUseProgram(program);
     glUniform2f(glGetUniformLocation(program, "u_texture_size"),
-                indices.texture.size.x, indices.texture.size.y);
+                batch.texture.size.x, batch.texture.size.y);
     glUniformMatrix4fv(glGetUniformLocation(program, "u_projection_matrix"), 1,
                        GL_FALSE, (const GLfloat *)projection_matrix.data);
-    glDrawElements(GL_TRIANGLES, indices.indices->size(), GL_UNSIGNED_SHORT,
-                   indices.indices->data());
-    indices.indices->clear();
+
+    glDrawElements(GL_TRIANGLES, batch.indices.size(), GL_UNSIGNED_SHORT,
+                   batch.indices.data());
   }
 
   /* flush to gpu */
   SDL_GL_SwapWindow(window);
 
+  for (auto batch : batches) {
+    batch.indices.clear();
+  }
+
   /* reset drawing state */
   base_z = 2;
   vertexes.clear();
-  indexes.clear();
-  subpx_indexes.clear();
 }

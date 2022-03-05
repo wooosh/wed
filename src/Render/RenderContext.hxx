@@ -1,10 +1,10 @@
 #pragma once
 
-#include "GlyphAtlas.hxx"
 #include "SDL.h"
 #include "Shader.hxx"
 #include "Types.hxx"
 #include <cstdint>
+#include <list>
 #include <sys/types.h>
 #include <vector>
 
@@ -28,10 +28,13 @@
 typedef uint16_t VertexIndex;
 
 struct RenderContext {
-  struct Indices {
+  struct Batch {
     GPUTexture texture;
     bool subpixel;
-    std::vector<uint16_t> *indices;
+    std::vector<uint16_t> indices;
+
+    void PushQuad(RenderLayerIdx z, Point dst, Point src, uint w, uint h,
+                  vec4<uint8_t> color, std::vector<uint16_t> *indexes);
   };
 
   SDL_Window *window;
@@ -41,13 +44,10 @@ struct RenderContext {
 
   ShaderPrograms programs;
 
-  GLuint texture;
-  vec2<uint16_t> texture_size;
-
   std::vector<Vertex> vertexes;
-  std::vector<Indices> indices2;
-  std::vector<VertexIndex> indexes;
-  std::vector<VertexIndex> subpx_indexes;
+  std::list<Batch> batches;
+
+  Batch *rect_batch;
 
   GLuint vao;
   GLuint vbo;
@@ -68,9 +68,7 @@ struct RenderContext {
 
   void UpdateProjection();
 
-  /* assumes RGB format TODO: fix */
-  /* TODO: deprecate */
-  void LoadTexture(const uint8_t *data, size_t w, size_t h);
+  Batch *NewBatch(Batch);
 
   /* TODO: destructor? make members of GPUTexture? refcount/non-movable/ */
 
@@ -85,15 +83,12 @@ struct RenderContext {
   /* data must not be null */
   static void CopyIntoTexture(GPUTexture &, Rect dst, uint8_t *data);
 
-  void PushQuad(RenderLayerIdx z, Point dst, Point src, uint w, uint h,
-                vec4<uint8_t> color, std::vector<uint16_t> *indexes);
+  void PushQuad(Batch *, RenderLayerIdx z, Point dst, Point src, uint w, uint h,
+                Color);
 
   void DrawRect(RenderLayerIdx z, Rect dst, Color color);
 
-  void DrawTexture(RenderLayerIdx z, Point dst, Rect src);
-
   // TODO: vec3 color, no text alpha
-  void DrawGlyph(RenderLayerIdx z, Point dst, Glyph, Color color);
 
   void Commit(void);
 };

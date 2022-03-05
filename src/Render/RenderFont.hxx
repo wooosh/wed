@@ -35,10 +35,11 @@ struct RenderFont {
    * rendercontext
    * TODO: renderfont.DrawFrame*/
 
+  RenderContext::Batch *batch;
   GPUTexture atlas;
   bool subpixel;
   size_t permanent_region_extent;
-  std::vector<uint16_t> *indices;
+  // std::vector<uint16_t> *indices;
 
   BitMatrix2D<BitMatrix2DFixedAxis::kHeight, uint32_t> used_space;
   BitMatrix2D<BitMatrix2DFixedAxis::kHeight, uint32_t> damaged_space;

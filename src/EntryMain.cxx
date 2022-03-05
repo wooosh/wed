@@ -1,21 +1,25 @@
 #include "Platform/LocateFont.hxx"
 #include "Render/RenderContext.hxx"
 #include "SDL.h"
-#include "src/Render/RenderFont.hxx"
-#include <climits>
-#define GL_GLEXT_PROTOTYPES
-#include "Render/GlyphAtlas.hxx"
-#include "SDL_opengl.h"
 #include "SDL_video.h"
 #include "TextBuffer/TextBuffer.hxx"
 #include "UI/View.hxx"
 #include "UI/ViewEditor.hxx"
 #include "Util/Assert.hxx"
+#include "src/Render/RenderFont.hxx"
 #include <chrono>
+#include <climits>
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
+
+#define GL_GLEXT_PROTOTYPES
+#include "SDL_opengl.h"
+
+/* TODO:
+ * - fix rendercontext to use indices properly
+ */
 
 void readFile(TextBuffer &tb, const char *filename) {
   std::ifstream file(filename, std::ios::binary);
@@ -46,11 +50,6 @@ int main(int argc, char **argv) {
       {argv[1], 24.0, FontFaceProperties::WEIGHT_REGULAR,
        FontFaceProperties::STRETCH_MEDIUM, FontFaceProperties::SLANT_NORMAL});
   assume(font_path.has_value(), "couldn't locate font");
-
-  // font render init
-  InitFontRenderer();
-
-  // GlyphAtlas atlas = GenerateAtlas(font_path.value(), 12.0);
 
   // SDL2 init
   int err = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
@@ -83,13 +82,10 @@ int main(int argc, char **argv) {
   auto font = LoadFont(&rctx, font_path.value(), 12.0);
   assume(font, "could not render font");
 
-  // rctx.PushTexture(0, 0, 0, 10, 0, atlas.image_w - 10, atlas.image_h);
-  // rctx.LoadTexture(&atlas.image[0], atlas.image_w, atlas.image_h);
-  // rctx.DrawTexture(1, {10, 10}, {0, 0, atlas.image_w, atlas.image_h});
   printf("atlas %u %u\n", font->atlas.size.x, font->atlas.size.y);
   rctx.DrawRect(0, {0, 0, 200, 200}, RGB(0x00ff00));
-  rctx.PushQuad(1, {10, 10}, {0, 0}, font->atlas.size.x, font->atlas.size.y,
-                RGB(0x111111), font->indices);
+  rctx.PushQuad(font->batch, 1, {10, 10}, {0, 0}, font->atlas.size.x,
+                font->atlas.size.y, RGB(0xffffff));
   rctx.Commit();
   SDL_Delay(2000);
 
@@ -102,7 +98,7 @@ int main(int argc, char **argv) {
   editor.first_line = 0;
   auto root = ViewRoot(editor);
 
-  for (size_t i = 0; i < 1; i++) {
+  for (size_t i = 0; i < 20; i++) {
 
     editor.first_line++;
     editor.first_line %= 200;
@@ -128,7 +124,7 @@ int main(int argc, char **argv) {
     std::cerr << "fps: "
               << 1000000 / (layout_time.count() + commit_time.count())
               << " fps\n";
-    SDL_Delay(2000);
+    SDL_Delay(1000 / 10);
   }
 
   LocateFontDeinit();

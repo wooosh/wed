@@ -117,9 +117,7 @@ std::optional<RenderFont> LoadFont(RenderContext *rctx, std::string path,
     }
   }
 
-  rf.indices = new std::vector<uint16_t>();
-  // printf("%u", rf.atlas.id);
-  rctx->indices2.push_back({rf.atlas, true, rf.indices});
+  rf.batch = rctx->NewBatch({rf.atlas, true, {}});
 
   return rf;
 }
@@ -154,31 +152,29 @@ RenderFont::Glyph RenderFont::GetGlyph(GlyphID glyph_id, bool permanent) {
 
   glyphs.insert({glyph_id, glyph});
 
-  /* TODO: opengl might want width as the number of bytes per row, not the
-   * number of channel-pairs */
-  printf("pitch %d\n", bitmap->pitch);
-  std::vector<uint8_t> pain(bitmap->width * 3 * 3 * bitmap->rows);
+  /* copy the freetype bitmap into our own buffer, since the pitch of it's
+   * bitmap does not correspond with the width, and can also be negative, which
+   * opengl has difficulty with */
+  std::vector<uint8_t> bitmap_copy(bitmap->width * 3 * 3 * bitmap->rows);
   uint8_t *src = bitmap->buffer;
-  uint8_t *dst = pain.data();
+  uint8_t *dst = bitmap_copy.data();
   for (size_t i = 0; i < bitmap->rows; i++) {
     memcpy(dst, src, bitmap->pitch);
     src += bitmap->pitch;
     dst += bitmap->width * 3;
   }
 
-  // RenderContext::CopyIntoTexture(atlas, glyph.texture_region,
-  // bitmap->buffer);
-  RenderContext::CopyIntoTexture(atlas, glyph.texture_region, pain.data());
+  RenderContext::CopyIntoTexture(atlas, glyph.texture_region,
+                                 bitmap_copy.data());
 
   return glyph;
 }
 
 void RenderFont::DrawGlyph(RenderLayerIdx z, Point dst, GlyphID glyph_id,
                            Color color) {
-  // printf("dst: %u %u\n", dst.x, dst.y);
   Glyph glyph = GetGlyph(glyph_id, false);
 
-  rctx->PushQuad(z, {dst.x + glyph.offset.x, dst.y - glyph.offset.y},
+  rctx->PushQuad(batch, z, {dst.x + glyph.offset.x, dst.y - glyph.offset.y},
                  glyph.texture_region.top_left(), glyph.texture_region.w,
-                 glyph.texture_region.h, color, indices);
+                 glyph.texture_region.h, color);
 }

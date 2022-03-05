@@ -16,8 +16,7 @@ void ViewEditor::draw(RenderContext &render) {
 
   render.DrawRect(LayerBg, viewport, RGB(0xf7f4ef));
   render.DrawRect(LayerGutter,
-                  {viewport.x, viewport.y, gutter_width, viewport.h},
-                  Dim(0.05));
+                  {viewport.x, viewport.y, gutter_width, viewport.h}, Dim(0.1));
 
   size_t y = viewport.y;
   size_t line_num = first_line;
