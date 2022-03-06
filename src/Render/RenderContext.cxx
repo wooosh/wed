@@ -22,7 +22,7 @@ void GLAPIENTRY MessageCallback(GLenum source, GLenum type, GLuint id,
 void RenderContext::Init(void) {
   glEnable(GL_DEBUG_OUTPUT);
 #ifndef __APPLE__
-  glDebugMessageCallback(MessageCallback, 0);
+  /*glDebugMessageCallback(MessageCallback, 0);*/
 #endif /* __APPLE__ */
 
   programs = LoadShaders();
@@ -135,8 +135,8 @@ void RenderContext::CopyIntoTexture(GPUTexture &texture, Rect dst,
 void RenderContext::PushQuad(Batch *batch, RenderLayerIdx z, Point dst,
                              Point src, uint w, uint h, Color color) {
   assert((size_t)base_z + (size_t)z < max_z);
-  assert(dst.x + w <= UINT16_MAX && dst.y + h <= UINT16_MAX);
-  assert(src.x + w <= UINT16_MAX && src.y + h <= UINT16_MAX);
+  // assert(dst.x + w <= UINT16_MAX && dst.y + h <= UINT16_MAX);
+  // assert(src.x + w <= UINT16_MAX && src.y + h <= UINT16_MAX);
 
   RenderLayerIdx depth = RENDER_LAYER_IDX_MAX - (base_z + z);
 
@@ -145,22 +145,22 @@ void RenderContext::PushQuad(Batch *batch, RenderLayerIdx z, Point dst,
   /* clang-format off */
   vertexes.insert(vertexes.end(), {
     {
-     {(uint16_t) dst.x, (uint16_t) dst.y},
+     {(int16_t) dst.x, (int16_t) dst.y},
      {(uint16_t) src.x, (uint16_t) src.y},
      color, depth
     },
     {
-     {(uint16_t) (dst.x+w), (uint16_t) dst.y},
+     {(int16_t) (dst.x+w), (int16_t) dst.y},
      {(uint16_t) (src.x+w), (uint16_t) src.y},
      color, depth
     },
     {
-     {(uint16_t)(dst.x+w), (uint16_t)(dst.y+h)},
+     {(int16_t)(dst.x+w), (int16_t)(dst.y+h)},
      {(uint16_t)(src.x+w), (uint16_t)(src.y+h)},
      color, depth
     },
     {
-     {(uint16_t) dst.x, (uint16_t) (dst.y+h)},
+     {(int16_t) dst.x, (int16_t) (dst.y+h)},
      {(uint16_t) src.x, (uint16_t) (src.y+h)},
      color, depth
     }

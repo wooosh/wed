@@ -39,11 +39,11 @@ template <typename T> struct mat4 {
 };
 
 struct Point {
-  uint x, y;
+  int x, y;
 };
 
 struct Rect {
-  uint x, y, w, h;
+  int x, y, w, h;
   Point top_left() const { return {x, y}; };
 };
 

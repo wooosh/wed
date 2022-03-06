@@ -1,6 +1,8 @@
 #include "Platform/LocateFont.hxx"
 #include "Render/RenderContext.hxx"
 #include "SDL.h"
+#include "SDL_keycode.h"
+#include "SDL_timer.h"
 #include "SDL_video.h"
 #include "TextBuffer/TextBuffer.hxx"
 #include "UI/View.hxx"
@@ -56,6 +58,7 @@ int main(int argc, char **argv) {
   assume(err == 0, SDL_GetError);
   // allow the screen to blank
   SDL_EnableScreenSaver();
+  SDL_EventState(SDL_FINGERMOTION, SDL_ENABLE);
   atexit(SDL_Quit);
 
   // create window
@@ -82,15 +85,6 @@ int main(int argc, char **argv) {
   auto font = LoadFont(&rctx, font_path.value(), 12.0);
   assume(font, "could not render font");
 
-  printf("atlas %u %u\n", font->atlas.size.x, font->atlas.size.y);
-  rctx.DrawRect(0, {0, 0, 200, 200}, RGB(0x00ff00));
-  rctx.PushQuad(font->batch, 1, {10, 10}, {0, 0}, font->atlas.size.x,
-                font->atlas.size.y, RGB(0xffffff));
-  rctx.Commit();
-  SDL_Delay(2000);
-
-  // std::abort();
-
   TextBuffer tb;
   readFile(tb, argv[2]);
 
@@ -98,33 +92,78 @@ int main(int argc, char **argv) {
   editor.first_line = 0;
   auto root = ViewRoot(editor);
 
-  for (size_t i = 0; i < 20; i++) {
+  SDL_Event event;
+  bool running = true;
+  const uint64_t frame_ms = 1000 / 60;
+  uint64_t last_render_time = 0;
+  printf("lines :%zu\n", editor.buffer.num_lines);
+  float scroll_accum = 0;
+  while (running && SDL_WaitEvent(&event)) {
 
-    editor.first_line++;
-    editor.first_line %= 200;
+    switch (event.type) {
+    case SDL_FINGERDOWN:
+    case SDL_FINGERUP:
+    case SDL_FINGERMOTION:
+      printf("HHHH\n");
+      std::abort();
+      editor.ScrollPx(event.tfinger.dy * (int)font->line_height / 2);
+      break;
+    case SDL_MOUSEWHEEL:
+      scroll_accum += event.wheel.preciseY;
+      printf("%f\n", event.wheel.preciseY);
+      // printf("amount %d\n", event.wheel.y);
 
-    auto t1 = std::chrono::high_resolution_clock::now();
-    root.draw(rctx);
-    auto t2 = std::chrono::high_resolution_clock::now();
-    rctx.Commit();
-    auto t3 = std::chrono::high_resolution_clock::now();
+      break;
+    case SDL_KEYDOWN:
+      switch (event.key.keysym.sym) {
+      case SDLK_UP:
+        if (editor.first_line > 0)
+          editor.first_line--;
+        break;
+      case SDLK_DOWN:
+        if (editor.first_line + 2 < editor.buffer.num_lines)
+          editor.first_line++;
+        break;
+      case SDLK_q:
+        running = false;
+        break;
+      }
+      break;
+    case SDL_MOUSEBUTTONDOWN:
+    case SDL_QUIT:
+      running = false;
+      break;
+    }
 
-    std::chrono::duration<double, std::micro> layout_time =
-        std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1);
-    std::chrono::duration<double, std::micro> commit_time =
-        std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2);
+    if (SDL_GetTicks64() - last_render_time > frame_ms) {
+      editor.ScrollPx(scroll_accum * (int)font->line_height / 2);
+      scroll_accum = 0;
+      auto t1 = std::chrono::high_resolution_clock::now();
+      root.draw(rctx);
+      auto t2 = std::chrono::high_resolution_clock::now();
+      rctx.Commit();
+      auto t3 = std::chrono::high_resolution_clock::now();
 
-    std::cerr << "\nNEW FRAME\n";
-    std::cerr << "draw:   " << editor.draw_time << "us\n";
-    std::cerr << "layout: " << layout_time.count() << "us\n";
-    std::cerr << "commit: " << commit_time.count() << "us\n";
-    std::cerr << "total:  " << layout_time.count() + commit_time.count()
-              << "us\n";
-    std::cerr << "nodraw: " << layout_time.count() - editor.draw_time << "us\n";
-    std::cerr << "fps: "
-              << 1000000 / (layout_time.count() + commit_time.count())
-              << " fps\n";
-    SDL_Delay(1000 / 10);
+      std::chrono::duration<double, std::micro> layout_time =
+          std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1);
+      std::chrono::duration<double, std::micro> commit_time =
+          std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2);
+
+      if (false) {
+        std::cerr << "\nNEW FRAME\n";
+        std::cerr << "draw:   " << editor.draw_time << "us\n";
+        std::cerr << "layout: " << layout_time.count() << "us\n";
+        std::cerr << "commit: " << commit_time.count() << "us\n";
+        std::cerr << "total:  " << layout_time.count() + commit_time.count()
+                  << "us\n";
+        std::cerr << "nodraw: " << layout_time.count() - editor.draw_time
+                  << "us\n";
+        std::cerr << "fps: "
+                  << 1000000 / (layout_time.count() + commit_time.count())
+                  << " fps\n";
+      }
+      last_render_time = SDL_GetTicks64();
+    }
   }
 
   LocateFontDeinit();

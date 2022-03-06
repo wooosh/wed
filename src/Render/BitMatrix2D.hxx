@@ -56,8 +56,9 @@ template <BitMatrix2DFixedAxis order, typename FixedAxis> struct BitMatrix2D {
       std::swap(r.w, r.h);
     }
 
-    FixedAxis mask = ((FixedAxis)(~(FixedAxis)0) << (major_len - r.w)) >> r.x;
-    for (size_type y = r.y; y < r.y + r.h; y++) {
+    FixedAxis mask =
+        ((FixedAxis)(~(FixedAxis)0) << (major_len - (uint)r.w)) >> (uint)r.x;
+    for (size_type y = (uint)r.y; y < (uint)r.y + (uint)r.h; y++) {
       rows[y] |= mask;
     }
   };

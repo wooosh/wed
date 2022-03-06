@@ -123,6 +123,9 @@ struct TextBuffer {
   /* monotonically increasing buffer version incremented every edit */
   size_t epoch;
 
+  size_t num_lines;
+  size_t num_bytes;
+
   /* TODO: handle dead iterators? RAII remove them from array? */
   // std::vector<std::weak_ptr<iterator>> persisted_iterators;
 

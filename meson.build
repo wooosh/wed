@@ -9,7 +9,7 @@ project('editor', 'cpp',
 
 deps = [
   dependency('GL'),
-  dependency('sdl2', default_options: ['werror=false', 'warning_level=0']),
+  dependency('sdl2_fork', default_options: ['werror=false', 'warning_level=0']),
   dependency('freetype2'),
 ]
 

@@ -5,7 +5,7 @@
 
 #define VERTEX_FORMAT                                                          \
   /* name, type, normalize in shader */                                        \
-  ATTR(screen_coord, vec2<uint16_t>, false)                                    \
+  ATTR(screen_coord, vec2<int16_t>, false)                                     \
   ATTR(texture_coord, vec2<uint16_t>, false)                                   \
   ATTR(color, vec4<uint8_t>, true)                                             \
   ATTR(depth, uint8_t, true)

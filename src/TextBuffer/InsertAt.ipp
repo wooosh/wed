@@ -18,6 +18,9 @@ void TextBuffer::InsertAt(iterator pos, const ForwardIter begin,
       newline_offset_scratch.begin(), newline_offset_scratch.end());
   newline_offset_scratch.clear();
 
+  num_lines += insert_span.newline_ptrs.len;
+  num_bytes += insert_span.contents.len;
+
   /* update spans array */
   Span pos_span = spans[pos.span_idx];
 

@@ -28,13 +28,12 @@ RenderFreeTypeGlyph(FT_Face face, RenderFont::GlyphID g, bool subpixel) {
 
   FT_Error err = FT_Load_Char(face, g, flags);
   expect(err == FT_Err_Ok);
-  printf("%u width 1\n", face->glyph->bitmap.width);
+
   FT_Bitmap bitmap = face->glyph->bitmap;
   if (subpixel) {
     /* TODO: should we round up? */
     bitmap.width = bitmap.width / 3u;
   }
-  printf("%u width 2\n", face->glyph->bitmap.width);
 
   return bitmap;
 }
@@ -50,7 +49,6 @@ std::optional<RenderFont> LoadFont(RenderContext *rctx, std::string path,
   RenderFont rf;
   rf.subpixel = true;
   rf.rctx = rctx;
-  rf.line_height = 25;
 
   err = FT_New_Face(library, path.c_str(), 0, &rf.ft_face);
   expect(err == FT_Err_Ok);
@@ -62,6 +60,9 @@ std::optional<RenderFont> LoadFont(RenderContext *rctx, std::string path,
                          (uint32_t)(pt_size * 64),
                          /* dpi TODO: look up dpi in registry */
                          96, 96);
+
+  /* freetype uses 26.6 fixed point for line height values */
+  rf.line_height = (float)rf.ft_face->size->metrics.height / (float)(1 << 6);
 
   /* determine slot size */
   auto em_bitmap = RenderFreeTypeGlyph(rf.ft_face, 'M', rf.subpixel);
@@ -138,14 +139,14 @@ RenderFont::Glyph RenderFont::GetGlyph(GlyphID glyph_id, bool permanent) {
   auto pos = used_space.FindUnsetRect(tile_w, tile_h);
   /* TODO: handle this without panicing */
   assume(pos, "could not find space in bitmatrix");
-  used_space.SetRect({(uint)pos->x, (uint)pos->y, (uint)tile_w, (uint)tile_h});
+  used_space.SetRect({(int)pos->x, (int)pos->y, (int)tile_w, (int)tile_h});
 
   /* freetype uses 26.6 fixed point for advance values */
   float advance = (float)ft_face->glyph->advance.x / (float)(1 << 6);
 
-  Glyph glyph = {{(uint)pos->x * tile_dimensions.x,
-                  (uint)pos->y * tile_dimensions.y, bitmap->width,
-                  bitmap->rows},
+  Glyph glyph = {{(int)pos->x * (int)tile_dimensions.x,
+                  (int)pos->y * (int)tile_dimensions.y, (int)bitmap->width,
+                  (int)bitmap->rows},
                  {ft_face->glyph->bitmap_left, ft_face->glyph->bitmap_top},
                  advance,
                  permanent};
