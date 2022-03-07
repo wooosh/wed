@@ -174,7 +174,7 @@ ShaderPrograms LoadShaders(void) {
 
   std::string vert_shader =
       "#version 330 core\n" + GenerateVertexShaderHeader() + vertex_shader;
-  std::cerr << vert_shader << "\n";
+
   CompileShader(vs, vert_shader);
   glAttachShader(programs.regular, vs);
   glAttachShader(programs.subpx, vs);

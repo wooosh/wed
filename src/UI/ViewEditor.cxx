@@ -3,25 +3,31 @@
 #include <cassert>
 #include <chrono>
 #include <iostream>
+#include <sys/types.h>
 
 enum Layer { LayerBg, LayerGutter, LayerText };
 
 void ViewEditor::ScrollPx(int amount) {
-  if (amount > 0) {
-    offset_px += amount;
-    first_line += offset_px / (int)font.line_height;
-    first_line = std::min(first_line, buffer.num_lines - 2);
-    offset_px %= (int)font.line_height;
+  offset_px += amount;
+  if (offset_px > (int)font.line_height && first_line == buffer.num_lines - 1) {
+    offset_px = font.line_height - 1;
+  }
+  ssize_t line_delta = offset_px / (int64_t)font.line_height;
 
-  } else {
-    offset_px += amount;
-    size_t lines_down = -(offset_px / (int64_t)font.line_height);
-    first_line -= std::min(first_line, lines_down);
-    offset_px %= (int)font.line_height;
-    if (first_line == 0) {
-      offset_px = std::max(offset_px, (int64_t)0);
+  if (offset_px < 0) {
+    line_delta--;
+    offset_px = font.line_height + offset_px;
+    if (-line_delta > (ssize_t)first_line) {
+      offset_px = 0;
     }
   }
+
+  line_delta = std::max(-(ssize_t)first_line, line_delta);
+  line_delta =
+      std::min((ssize_t)(buffer.num_lines - first_line) - 1, line_delta);
+
+  first_line += line_delta;
+  offset_px %= (int)font.line_height;
 }
 
 void ViewEditor::draw(RenderContext &render) {
@@ -36,11 +42,12 @@ void ViewEditor::draw(RenderContext &render) {
 
   int y = viewport.y - offset_px;
   size_t line_num = first_line;
+
   TextBuffer::iterator i = buffer.AtLineCol(first_line, 0);
 
   std::string run;
 
-  while (y + font.line_height < viewport.y + viewport.h && !i.IsEOF()) {
+  while (y < viewport.y + viewport.h && !i.IsEOF()) {
     /* draw gutter/line number */
     drawRun(render, viewport.y + digit_width, y, std::to_string(line_num + 1));
 

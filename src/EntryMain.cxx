@@ -96,23 +96,13 @@ int main(int argc, char **argv) {
   bool running = true;
   const uint64_t frame_ms = 1000 / 60;
   uint64_t last_render_time = 0;
-  printf("lines :%zu\n", editor.buffer.num_lines);
+
   float scroll_accum = 0;
   while (running && SDL_WaitEvent(&event)) {
 
     switch (event.type) {
-    case SDL_FINGERDOWN:
-    case SDL_FINGERUP:
-    case SDL_FINGERMOTION:
-      printf("HHHH\n");
-      std::abort();
-      editor.ScrollPx(event.tfinger.dy * (int)font->line_height / 2);
-      break;
     case SDL_MOUSEWHEEL:
       scroll_accum += event.wheel.preciseY;
-      printf("%f\n", event.wheel.preciseY);
-      // printf("amount %d\n", event.wheel.y);
-
       break;
     case SDL_KEYDOWN:
       switch (event.key.keysym.sym) {
@@ -136,7 +126,7 @@ int main(int argc, char **argv) {
     }
 
     if (SDL_GetTicks64() - last_render_time > frame_ms) {
-      editor.ScrollPx(scroll_accum * (int)font->line_height / 2);
+      editor.ScrollPx(-scroll_accum * (int)font->line_height);
       scroll_accum = 0;
       auto t1 = std::chrono::high_resolution_clock::now();
       root.draw(rctx);

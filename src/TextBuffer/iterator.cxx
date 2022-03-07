@@ -31,10 +31,9 @@ iterator TextBuffer::AtLineCol(size_t line, size_t col) {
   for (size_t i = 0; i < spans.size(); i++) {
     Span span = spans[i];
     if (line < lines_traversed + span.newline_ptrs.len) {
-
       size_t byte_offset = 0;
       if (line - lines_traversed > 0) {
-        byte_offset = (size_t)(span.newline_ptrs[line - lines_traversed] -
+        byte_offset = (size_t)(span.newline_ptrs[line - lines_traversed - 1] -
                                span.contents.begin) +
                       1;
       }
