@@ -33,6 +33,11 @@ struct RenderContext {
     bool subpixel;
     std::vector<uint16_t> indices;
 
+    Batch(GPUTexture texture, bool subpixel)
+        : texture(texture), subpixel(subpixel){};
+    // Batch(Batch const &) = delete;
+    // Batch &operator=(RenderContext const &) = delete;
+
     void PushQuad(RenderLayerIdx z, Point dst, Point src, uint w, uint h,
                   vec4<uint8_t> color, std::vector<uint16_t> *indexes);
   };
@@ -68,7 +73,7 @@ struct RenderContext {
 
   void UpdateProjection();
 
-  Batch *NewBatch(Batch);
+  Batch *NewBatch(GPUTexture, bool subpixel);
 
   /* TODO: destructor? make members of GPUTexture? refcount/non-movable/ */
 

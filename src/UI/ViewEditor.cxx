@@ -31,10 +31,18 @@ void ViewEditor::ScrollPx(int amount) {
 }
 
 void ViewEditor::draw(RenderContext &render) {
-  draw_time = 0;
+  /* apply scroll velocity TODO: frame update vs draw */
+  constexpr int anim_factor = 3;
+  ScrollPx(remaining_delta / anim_factor);
+  remaining_delta -= remaining_delta / anim_factor;
+  if (std::abs(remaining_delta) < anim_factor) {
+    remaining_delta = 0;
+  }
+
   const int digit_width = font.glyphs['0'].advance;
   assert(digit_width > 0);
   const int gutter_width = (uint)digit_width * 5;
+  const int padding = 3;
 
   render.DrawRect(LayerBg, viewport, RGB(0xf7f4ef));
   render.DrawRect(LayerGutter,
@@ -42,14 +50,13 @@ void ViewEditor::draw(RenderContext &render) {
 
   int y = viewport.y - offset_px;
   size_t line_num = first_line;
-
   TextBuffer::iterator i = buffer.AtLineCol(first_line, 0);
 
   std::string run;
 
   while (y < viewport.y + viewport.h && !i.IsEOF()) {
     /* draw gutter/line number */
-    drawRun(render, viewport.y + digit_width, y, std::to_string(line_num + 1));
+    drawRun(render, viewport.x + digit_width, y, std::to_string(line_num + 1));
 
     /* draw line */
     int width = 0;
@@ -57,7 +64,7 @@ void ViewEditor::draw(RenderContext &render) {
     run.clear();
     while (true) {
       if (i.IsEOF()) {
-        drawRun(render, viewport.x + gutter_width, y, run);
+        drawRun(render, viewport.x + gutter_width + padding, y, run);
         break;
       }
 
@@ -65,7 +72,7 @@ void ViewEditor::draw(RenderContext &render) {
 
       if (c == '\n') {
         /* commit run */
-        drawRun(render, viewport.x + gutter_width, y, run);
+        drawRun(render, viewport.x + gutter_width + padding, y, run);
         i++;
         y += font.line_height;
         line_num++;
@@ -79,7 +86,7 @@ void ViewEditor::draw(RenderContext &render) {
       int advance = font.glyphs[*i].advance;
       if (width + advance >= viewport.w - gutter_width) {
         /* commit run */
-        drawRun(render, viewport.x + gutter_width, y, run);
+        drawRun(render, viewport.x + gutter_width + padding, y, run);
         y += font.line_height;
       } else {
         run.push_back(c);
@@ -93,7 +100,6 @@ void ViewEditor::drawRun(RenderContext &render, int x, int y,
                          const std::string &run) {
   (void)render;
   /* TODO: drawText should not take a cstr */
-  auto t1 = std::chrono::high_resolution_clock::now();
   float pos = x;
   for (size_t i = 0; i < run.size(); i++) {
     if (isprint(run[i])) {
@@ -102,11 +108,4 @@ void ViewEditor::drawRun(RenderContext &render, int x, int y,
       pos += font.glyphs[run[i]].advance;
     }
   }
-
-  auto t2 = std::chrono::high_resolution_clock::now();
-
-  std::chrono::duration<double, std::micro> run_time =
-      std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1);
-
-  draw_time += run_time.count();
 }

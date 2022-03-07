@@ -51,13 +51,12 @@ void RenderContext::Init(void) {
 
   static uint8_t backing_texture[4] = {0xff, 0xff, 0xff, 0xff};
   rect_batch = NewBatch(
-      {CreateTexture(GPUTexture::Format::kGrayscale, 1, 1, backing_texture),
-       false,
-       {}});
+      CreateTexture(GPUTexture::Format::kGrayscale, 1, 1, backing_texture),
+      false);
 }
 
-RenderContext::Batch *RenderContext::NewBatch(Batch b) {
-  batches.push_back(b);
+RenderContext::Batch *RenderContext::NewBatch(GPUTexture t, bool subpixel) {
+  batches.emplace_back(Batch(t, subpixel));
   return &batches.back();
 }
 
@@ -193,7 +192,7 @@ void RenderContext::Commit(void) {
 
   glEnable(GL_BLEND);
 
-  for (auto batch : batches) {
+  for (auto &batch : batches) {
     if (batch.indices.size() <= 0)
       continue;
     GLuint program;
@@ -220,7 +219,7 @@ void RenderContext::Commit(void) {
   /* flush to gpu */
   SDL_GL_SwapWindow(window);
 
-  for (auto batch : batches) {
+  for (auto &batch : batches) {
     batch.indices.clear();
   }
 

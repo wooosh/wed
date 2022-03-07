@@ -118,7 +118,7 @@ std::optional<RenderFont> LoadFont(RenderContext *rctx, std::string path,
     }
   }
 
-  rf.batch = rctx->NewBatch({rf.atlas, true, {}});
+  rf.batch = rctx->NewBatch(rf.atlas, true);
 
   return rf;
 }

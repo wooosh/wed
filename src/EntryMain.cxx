@@ -1,6 +1,7 @@
 #include "Platform/LocateFont.hxx"
 #include "Render/RenderContext.hxx"
 #include "SDL.h"
+#include "SDL_error.h"
 #include "SDL_keycode.h"
 #include "SDL_timer.h"
 #include "SDL_video.h"
@@ -96,37 +97,47 @@ int main(int argc, char **argv) {
   bool running = true;
   const uint64_t frame_ms = 1000 / 60;
   uint64_t last_render_time = 0;
+  int frame_num = 0;
 
   float scroll_accum = 0;
-  while (running && SDL_WaitEvent(&event)) {
 
-    switch (event.type) {
-    case SDL_MOUSEWHEEL:
-      scroll_accum += event.wheel.preciseY;
-      break;
-    case SDL_KEYDOWN:
-      switch (event.key.keysym.sym) {
-      case SDLK_UP:
-        if (editor.first_line > 0)
-          editor.first_line--;
+  while (running) {
+    /* TODO: error handling */
+    int event_present = 0;
+    int64_t remaining_time = frame_ms - (SDL_GetTicks64() - last_render_time);
+    if (remaining_time > 2) {
+      event_present = SDL_WaitEventTimeout(&event, remaining_time);
+    }
+
+    if (event_present) {
+      switch (event.type) {
+      case SDL_MOUSEWHEEL:
+        scroll_accum += event.wheel.preciseY;
         break;
-      case SDLK_DOWN:
-        if (editor.first_line + 2 < editor.buffer.num_lines)
-          editor.first_line++;
+      case SDL_KEYDOWN:
+        switch (event.key.keysym.sym) {
+        case SDLK_UP:
+          if (editor.first_line > 0)
+            editor.first_line--;
+          break;
+        case SDLK_DOWN:
+          if (editor.first_line + 2 < editor.buffer.num_lines)
+            editor.first_line++;
+          break;
+        case SDLK_q:
+          running = false;
+          break;
+        }
         break;
-      case SDLK_q:
+      case SDL_MOUSEBUTTONDOWN:
+      case SDL_QUIT:
         running = false;
         break;
       }
-      break;
-    case SDL_MOUSEBUTTONDOWN:
-    case SDL_QUIT:
-      running = false;
-      break;
     }
 
     if (SDL_GetTicks64() - last_render_time > frame_ms) {
-      editor.ScrollPx(-scroll_accum * (int)font->line_height);
+      editor.remaining_delta += -scroll_accum * 3 * (int)font->line_height;
       scroll_accum = 0;
       auto t1 = std::chrono::high_resolution_clock::now();
       root.draw(rctx);
@@ -139,20 +150,19 @@ int main(int argc, char **argv) {
       std::chrono::duration<double, std::micro> commit_time =
           std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2);
 
-      if (false) {
+      if (frame_num % 60 == 0) {
         std::cerr << "\nNEW FRAME\n";
-        std::cerr << "draw:   " << editor.draw_time << "us\n";
         std::cerr << "layout: " << layout_time.count() << "us\n";
         std::cerr << "commit: " << commit_time.count() << "us\n";
         std::cerr << "total:  " << layout_time.count() + commit_time.count()
-                  << "us\n";
-        std::cerr << "nodraw: " << layout_time.count() - editor.draw_time
                   << "us\n";
         std::cerr << "fps: "
                   << 1000000 / (layout_time.count() + commit_time.count())
                   << " fps\n";
       }
       last_render_time = SDL_GetTicks64();
+      frame_num++;
+      frame_num %= 60;
     }
   }
 
