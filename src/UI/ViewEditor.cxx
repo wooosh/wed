@@ -9,9 +9,10 @@ enum Layer { LayerBg, LayerGutter, LayerText };
 
 void ViewEditor::ScrollPx(int amount) {
   offset_px += amount;
+  /*
   if (offset_px > (int)font.line_height && first_line == buffer.num_lines - 1) {
     offset_px = font.line_height - 1;
-  }
+  }*/
   ssize_t line_delta = offset_px / (int64_t)font.line_height;
 
   if (offset_px < 0) {
@@ -27,15 +28,19 @@ void ViewEditor::ScrollPx(int amount) {
       std::min((ssize_t)(buffer.num_lines - first_line) - 1, line_delta);
 
   first_line += line_delta;
-  offset_px %= (int)font.line_height;
+  if (first_line == buffer.num_lines - 1) {
+    offset_px = std::min(offset_px, (int64_t)font.line_height);
+  } else {
+    offset_px %= (int)font.line_height;
+  }
 }
 
 void ViewEditor::draw(RenderContext &render) {
   /* apply scroll velocity TODO: frame update vs draw */
-  constexpr int anim_factor = 3;
+  constexpr double anim_factor = 3;
   ScrollPx(remaining_delta / anim_factor);
   remaining_delta -= remaining_delta / anim_factor;
-  if (std::abs(remaining_delta) < anim_factor) {
+  if (std::abs(remaining_delta) < 1) {
     remaining_delta = 0;
   }
 

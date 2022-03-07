@@ -12,7 +12,7 @@ struct ViewEditor : View {
   int64_t offset_px;
 
   /* scroll animation */
-  int64_t remaining_delta;
+  double remaining_delta;
 
   ViewEditor(RenderFont &font, TextBuffer &buffer)
       : font(font), buffer(buffer), first_line(0), offset_px(0),
