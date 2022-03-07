@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <optional>
 #include <vector>
+#include <limits>
 
 /* TODO: explains how this bounds the size, doesn't change argument order */
 /* axis size BitMatrixFixedDimension */
