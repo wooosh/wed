@@ -7,6 +7,8 @@ project('editor', 'cpp',
 	#'b_sanitize=address'
   ])
 
+add_global_arguments('-DSDL_VIDEO_DRIVER_X11_XINPUT2_SUPPORTS_SCROLLINFO=1', language : 'c')
+
 deps = [
   dependency('GL'),
   dependency('sdl2_fork', default_options: ['werror=false', 'warning_level=0']),
