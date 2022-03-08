@@ -2,25 +2,26 @@
 #include "SDL_opengl_glext.h"
 #include <cassert>
 #include <chrono>
+#include <cstdint>
 #include <iostream>
 #include <sys/types.h>
 
 enum Layer { LayerBg, LayerGutter, LayerText };
 
 void ViewEditor::ScrollPx(int amount) {
-  offset_px += amount;
-  /*
-  if (offset_px > (int)font.line_height && first_line == buffer.num_lines - 1) {
-    offset_px = font.line_height - 1;
-  }*/
-  ssize_t line_delta = offset_px / (int64_t)font.line_height;
+  if (amount == 0)
+    return;
 
+  offset_px += amount;
+  ssize_t line_delta = offset_px / (int64_t)font.line_height;
   if (offset_px < 0) {
+    // we only need to fix the last line
     line_delta--;
-    offset_px = font.line_height + offset_px;
+    offset_px = font.line_height + (offset_px % (int64_t)font.line_height);
     if (-line_delta > (ssize_t)first_line) {
       offset_px = 0;
     }
+    line_delta += offset_px / (int64_t)font.line_height;
   }
 
   line_delta = std::max(-(ssize_t)first_line, line_delta);
@@ -31,18 +32,37 @@ void ViewEditor::ScrollPx(int amount) {
   if (first_line == buffer.num_lines - 1) {
     offset_px = std::min(offset_px, (int64_t)font.line_height);
   } else {
-    offset_px %= (int)font.line_height;
+    offset_px %= (int64_t)font.line_height;
   }
+  if (offset_px < 0) {
+    printf("fasdkjf;lkqj;glerk %zd\n", offset_px);
+  }
+  /*
+  printf("%d == %zd == %zd*%zd + %zd", amount,
+         line_delta * (int64_t)font.line_height + offset_px - ooo, line_delta,
+         (int64_t)font.line_height, offset_px - old_offset_px);*/
 }
+
+void ViewEditor::ScrollLines(int amount) {
+  target_px += amount * font.line_height;
+}
+
+void ViewEditor::PageUp(void) { ScrollLines(-viewport.h / font.line_height); }
+
+void ViewEditor::PageDown(void) { ScrollLines(viewport.h / font.line_height); }
 
 void ViewEditor::draw(RenderContext &render) {
   /* apply scroll velocity TODO: frame update vs draw */
   constexpr double anim_factor = 3;
-  ScrollPx(remaining_delta / anim_factor);
-  remaining_delta -= remaining_delta / anim_factor;
-  if (std::abs(remaining_delta) < 1) {
-    remaining_delta = 0;
+  int64_t move_amount = (target_px - progress_target) / anim_factor;
+  if (std::abs(target_px - progress_target) < anim_factor) {
+    move_amount = target_px - progress_target;
+    progress_target = 0;
+    target_px = 0;
+  } else {
+    progress_target += move_amount;
   }
+  ScrollPx(move_amount);
 
   const int digit_width = font.glyphs['0'].advance;
   assert(digit_width > 0);

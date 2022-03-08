@@ -117,12 +117,18 @@ int main(int argc, char **argv) {
       case SDL_KEYDOWN:
         switch (event.key.keysym.sym) {
         case SDLK_UP:
-          if (editor.first_line > 0)
-            editor.first_line--;
+          if (event.key.keysym.mod & KMOD_SHIFT) {
+            editor.PageUp();
+          } else {
+            editor.ScrollLines(-1);
+          }
           break;
         case SDLK_DOWN:
-          if (editor.first_line + 2 < editor.buffer.num_lines)
-            editor.first_line++;
+          if (event.key.keysym.mod & KMOD_SHIFT) {
+            editor.PageDown();
+          } else {
+            editor.ScrollLines(1);
+          }
           break;
         case SDLK_q:
           running = false;
@@ -137,7 +143,7 @@ int main(int argc, char **argv) {
     }
 
     if (SDL_GetTicks64() - last_render_time > frame_ms) {
-      editor.remaining_delta += -scroll_accum * 3 * (int)font->line_height;
+      editor.target_px += -scroll_accum * 3 * (int)font->line_height;
       scroll_accum = 0;
       auto t1 = std::chrono::high_resolution_clock::now();
       root.draw(rctx);
@@ -150,7 +156,7 @@ int main(int argc, char **argv) {
       std::chrono::duration<double, std::micro> commit_time =
           std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2);
 
-      if (frame_num % 60 == 0) {
+      if (false && frame_num % 60 == 0) {
         std::cerr << "\nNEW FRAME\n";
         std::cerr << "layout: " << layout_time.count() << "us\n";
         std::cerr << "commit: " << commit_time.count() << "us\n";

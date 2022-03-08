@@ -12,13 +12,18 @@ struct ViewEditor : View {
   int64_t offset_px;
 
   /* scroll animation */
-  double remaining_delta;
+  double target_px;
+  double progress_target;
 
   ViewEditor(RenderFont &font, TextBuffer &buffer)
-      : font(font), buffer(buffer), first_line(0), offset_px(0),
-        remaining_delta(0){};
+      : font(font), buffer(buffer), first_line(0), offset_px(0), target_px(0),
+        progress_target(0){};
 
   void ScrollPx(int amount);
+  void ScrollLines(int amount);
+  void PageUp(void);
+  void PageDown(void);
+
   virtual void draw(RenderContext &render);
   void drawRun(RenderContext &render, int x, int y, const std::string &);
 };
