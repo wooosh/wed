@@ -144,7 +144,8 @@ static std::string subpx_fragment_shader = R"(
   }
 )";
 
-static void CompileShader(GLuint shader_id, std::string &shader_source) {
+static void CompileShader(GLuint shader_id, std::string shader_name,
+                          std::string &shader_source) {
   const char *shader_data = shader_source.data();
   const int shader_len = shader_source.size();
 
@@ -159,7 +160,8 @@ static void CompileShader(GLuint shader_id, std::string &shader_source) {
 
     std::string error_msg(error_len, '#');
     glGetShaderInfoLog(shader_id, error_len, &error_len, error_msg.data());
-    std::cerr << error_msg << "\n";
+    std::cerr << "error in compiling shader '" << shader_name
+              << "': " << error_msg << "\n";
     std::abort();
   }
 }
@@ -175,15 +177,15 @@ ShaderPrograms LoadShaders(void) {
   std::string vert_shader =
       "#version 330 core\n" + GenerateVertexShaderHeader() + vertex_shader;
 
-  CompileShader(vs, vert_shader);
+  CompileShader(vs, "vertex shader", vert_shader);
   glAttachShader(programs.regular, vs);
   glAttachShader(programs.subpx, vs);
 
-  CompileShader(fs, fragment_shader);
+  CompileShader(fs, "default fragment shader", fragment_shader);
   glAttachShader(programs.regular, fs);
   glLinkProgram(programs.regular);
 
-  CompileShader(subpx_fs, subpx_fragment_shader);
+  CompileShader(subpx_fs, "subpixel fragment shader", subpx_fragment_shader);
   glAttachShader(programs.subpx, subpx_fs);
   glLinkProgram(programs.subpx);
 
