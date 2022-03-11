@@ -100,7 +100,7 @@ void ViewEditor::draw(RenderContext &render) {
     float x = 0;
 
     run.clear();
-    while (true) {
+    while (y < viewport.y + viewport.h) {
       if (i == *cursor) {
         /* TODO: use font metrics to figure out positioning */
         render.DrawRect(LayerCursor,
