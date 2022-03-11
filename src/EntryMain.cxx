@@ -104,11 +104,16 @@ int main(int argc, char **argv) {
   float scroll_accum = 0;
 
   while (running) {
+    auto t0 = std::chrono::high_resolution_clock::now();
     /* TODO: error handling */
     int event_present = 0;
-    int64_t remaining_time = frame_ms - (SDL_GetTicks64() - last_render_time);
-    if (remaining_time > 2) {
-      event_present = SDL_WaitEventTimeout(&event, remaining_time);
+    if (root.is_animating) {
+      int64_t remaining_time = frame_ms - (SDL_GetTicks64() - last_render_time);
+      if (remaining_time > 2) {
+        event_present = SDL_WaitEventTimeout(&event, remaining_time);
+      }
+    } else {
+      event_present = SDL_WaitEvent(&event);
     }
 
     if (event_present) {
@@ -169,24 +174,26 @@ int main(int argc, char **argv) {
       rctx.Commit();
       auto t3 = std::chrono::high_resolution_clock::now();
 
-      std::chrono::duration<double, std::micro> layout_time =
-          std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1);
-      std::chrono::duration<double, std::micro> commit_time =
-          std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2);
-
-      if (frame_num % 60 == 0) {
+      if (0 && frame_num % 60 == 0) {
+        std::chrono::duration<double, std::nano> total_time =
+            std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t0);
+        std::chrono::duration<double, std::nano> layout_time =
+            std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1);
+        std::chrono::duration<double, std::nano> commit_time =
+            std::chrono::duration_cast<std::chrono::nanoseconds>(t3 - t2);
         std::cerr << "\n1 second average\n";
-        std::cerr << "layout: " << layout_time.count() << "us\n";
-        std::cerr << "commit: " << commit_time.count() << "us\n";
-        std::cerr << "total:  " << layout_time.count() + commit_time.count()
-                  << "us\n";
+        std::cerr << "layout: " << layout_time.count() << "ns\n";
+        std::cerr << "commit: " << commit_time.count() << "ns\n";
+        std::cerr << "total draw:  "
+                  << layout_time.count() + commit_time.count() << "ns\n";
+        std::cerr << "total draw + events:  " << total_time.count() << "ns\n";
         std::cerr << "fps: "
-                  << 1000000 / (layout_time.count() + commit_time.count())
+                  << 1000000000 / (layout_time.count() + commit_time.count())
                   << " fps\n";
       }
       last_render_time = SDL_GetTicks64();
       frame_num++;
-      frame_num %= 60;
+      // frame_num %= 60;
     }
   }
 

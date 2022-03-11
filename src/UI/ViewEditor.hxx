@@ -24,7 +24,9 @@ struct ViewEditor : View {
 
   ViewEditor(RenderFont &font, TextBuffer &buffer)
       : font(font), buffer(buffer), first_line(0), offset_px(0), target_px(0),
-        progress_target(0){};
+        progress_target(0) {
+    is_animating = true;
+  };
 
   void ScrollPx(int amount);
   void ScrollLines(int amount);

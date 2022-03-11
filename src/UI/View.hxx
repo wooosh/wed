@@ -10,6 +10,9 @@
 struct View {
   /* uses global coords */
   Rect viewport;
+
+  bool is_animating;
+
   /* TODO: should this be passed as a reference? why not just global editor/draw
    * state */
   virtual void draw(RenderContext &) = 0;
@@ -29,13 +32,14 @@ public:
   ViewRoot(View &child_view) : child(child_view) {
     viewport.x = 0;
     viewport.y = 0;
+    is_animating = true;
   };
 
   virtual void draw(RenderContext &render) {
     viewport.w = render.win_w;
     viewport.h = render.win_h;
     child.viewport = viewport;
-    // render.commit();
     child.draw(render);
+    is_animating = child.is_animating;
   }
 };

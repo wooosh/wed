@@ -18,6 +18,8 @@ struct Hasher {
     assume(err != XXH_ERROR, "xxh64 failed to reset state");
   }
 
+  ~Hasher() { XXH64_freeState(state); }
+
   void UpdateHash(void *data, size_t len) {
     XXH_errorcode err = XXH64_update(state, data, len);
     assert(err != XXH_ERROR);
@@ -25,7 +27,7 @@ struct Hasher {
 
   operator Hash() { return XXH64_digest(state); }
 
-  template <typename T> Hasher &operator()(T v) {
+  template <typename T> inline Hasher &add(T v) {
     if constexpr (std::is_integral<T>::value) {
       UpdateHash(&v, sizeof(T));
     } else {

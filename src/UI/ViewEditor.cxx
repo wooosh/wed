@@ -34,9 +34,6 @@ void ViewEditor::ScrollPx(int amount) {
   } else {
     offset_px %= (int64_t)font.line_height;
   }
-  if (offset_px < 0) {
-    printf("fasdkjf;lkqj;glerk %zd\n", offset_px);
-  }
   /*
   printf("%d == %zd == %zd*%zd + %zd", amount,
          line_delta * (int64_t)font.line_height + offset_px - ooo, line_delta,
@@ -64,8 +61,14 @@ void ViewEditor::draw(RenderContext &render) {
   }
   ScrollPx(move_amount);
 
-  Hash inputs = Hasher()(first_line)(offset_px)(buffer.epoch)(cursor->span_idx)(
-      cursor->byte_offset);
+  is_animating = target_px != 0;
+
+  Hash inputs = Hasher()
+                    .add(first_line)
+                    .add(offset_px)
+                    .add(buffer.epoch)
+                    .add(cursor->span_idx)
+                    .add(cursor->byte_offset);
   if (inputs == last_inputs)
     return;
   last_inputs = inputs;
