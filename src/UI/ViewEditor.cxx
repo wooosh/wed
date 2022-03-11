@@ -1,5 +1,6 @@
 #include "ViewEditor.hxx"
 #include "SDL_opengl_glext.h"
+#include "src/Render/Types.hxx"
 #include <cassert>
 #include <chrono>
 #include <cstdint>
@@ -48,6 +49,13 @@ void ViewEditor::PageUp(void) { ScrollLines(-viewport.h / font.line_height); }
 
 void ViewEditor::PageDown(void) { ScrollLines(viewport.h / font.line_height); }
 
+int NumDigits(size_t num) {
+  int len = 1;
+  while (num /= 10)
+    len++;
+  return len;
+}
+
 void ViewEditor::draw(RenderContext &render) {
   /* apply scroll velocity TODO: frame update vs draw */
   constexpr double anim_factor = 3;
@@ -79,7 +87,9 @@ void ViewEditor::draw(RenderContext &render) {
 
   const int digit_width = font.glyphs['0'].advance;
   assert(digit_width > 0);
-  const int gutter_width = (uint)digit_width * 5;
+  const int line_no_digits = 2 + NumDigits(buffer.num_lines);
+  /* 2 digit padding */
+  const int gutter_width = digit_width * (line_no_digits + 2);
   const int padding = 3;
 
   render.DrawRect(LayerBg, viewport, RGB(0xf7f4ef));
