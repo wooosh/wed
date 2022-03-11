@@ -118,6 +118,16 @@ int main(int argc, char **argv) {
 
     if (event_present) {
       switch (event.type) {
+      case SDL_WINDOWEVENT:
+        if (event.window.event == SDL_WINDOWEVENT_RESIZED ||
+            event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
+          rctx.win_w = event.window.data1;
+          rctx.win_h = event.window.data2;
+          rctx.UpdateProjection();
+          /* TODO: better way to force rerender */
+          // last_render_time = 0;
+        }
+        break;
       case SDL_MOUSEWHEEL:
         scroll_accum += event.wheel.preciseY;
         break;
@@ -174,14 +184,14 @@ int main(int argc, char **argv) {
       rctx.Commit();
       auto t3 = std::chrono::high_resolution_clock::now();
 
-      if (0 && frame_num % 60 == 0) {
+      if (frame_num % 60 == 0) {
         std::chrono::duration<double, std::nano> total_time =
             std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t0);
         std::chrono::duration<double, std::nano> layout_time =
             std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1);
         std::chrono::duration<double, std::nano> commit_time =
             std::chrono::duration_cast<std::chrono::nanoseconds>(t3 - t2);
-        std::cerr << "\n1 second average\n";
+        std::cerr << "\nnew frame:\n";
         std::cerr << "layout: " << layout_time.count() << "ns\n";
         std::cerr << "commit: " << commit_time.count() << "ns\n";
         std::cerr << "total draw:  "

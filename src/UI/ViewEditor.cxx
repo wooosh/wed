@@ -67,6 +67,10 @@ void ViewEditor::draw(RenderContext &render) {
                     .add(first_line)
                     .add(offset_px)
                     .add(buffer.epoch)
+                    .add(viewport.w)
+                    .add(viewport.h)
+                    .add(viewport.x)
+                    .add(viewport.y)
                     .add(cursor->span_idx)
                     .add(cursor->byte_offset);
   if (inputs == last_inputs)
@@ -93,7 +97,6 @@ void ViewEditor::draw(RenderContext &render) {
     drawRun(render, viewport.x + digit_width, y, std::to_string(line_num + 1));
 
     /* draw line */
-    int width = 0;
     float x = 0;
 
     run.clear();
@@ -127,9 +130,10 @@ void ViewEditor::draw(RenderContext &render) {
         c = '?';
       }
       int advance = font.glyphs[*i].advance;
-      if (width + advance >= viewport.w - gutter_width) {
+      if (x + advance >= viewport.w - gutter_width) {
         /* commit run */
         drawRun(render, viewport.x + gutter_width + padding, y, run);
+        run.clear();
         y += font.line_height;
         x = 0;
       } else {
