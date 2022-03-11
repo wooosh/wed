@@ -2,6 +2,7 @@
 #include "Render/RenderContext.hxx"
 #include "SDL.h"
 #include "SDL_error.h"
+#include "SDL_events.h"
 #include "SDL_keycode.h"
 #include "SDL_timer.h"
 #include "SDL_video.h"
@@ -91,6 +92,7 @@ int main(int argc, char **argv) {
 
   auto editor = ViewEditor(*font, tb);
   editor.first_line = 0;
+  editor.cursor = tb.PersistIterator(tb.AtByteOffset(0));
   auto root = ViewRoot(editor);
 
   SDL_Event event;
@@ -114,6 +116,13 @@ int main(int argc, char **argv) {
       case SDL_MOUSEWHEEL:
         scroll_accum += event.wheel.preciseY;
         break;
+
+      case SDL_TEXTINPUT: {
+        std::string_view text(event.text.text);
+        tb.InsertAt(*editor.cursor, text.begin(), text.end());
+        break;
+      }
+
       case SDL_KEYDOWN:
         switch (event.key.keysym.sym) {
         case SDLK_UP:
@@ -130,8 +139,17 @@ int main(int argc, char **argv) {
             editor.ScrollLines(1);
           }
           break;
-        case SDLK_q:
-          running = false;
+        case SDLK_RIGHT:
+          if (*editor.cursor < editor.buffer.end())
+            (*editor.cursor)++;
+          break;
+        case SDLK_LEFT:
+          if (editor.buffer.begin() < *editor.cursor)
+            (*editor.cursor)--;
+          break;
+        case SDLK_RETURN:
+          std::string_view newline = "\n";
+          tb.InsertAt(*editor.cursor, newline.begin(), newline.end());
           break;
         }
         break;
@@ -156,8 +174,8 @@ int main(int argc, char **argv) {
       std::chrono::duration<double, std::micro> commit_time =
           std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2);
 
-      if (false && frame_num % 60 == 0) {
-        std::cerr << "\nNEW FRAME\n";
+      if (frame_num % 60 == 0) {
+        std::cerr << "\n1 second average\n";
         std::cerr << "layout: " << layout_time.count() << "us\n";
         std::cerr << "commit: " << commit_time.count() << "us\n";
         std::cerr << "total:  " << layout_time.count() + commit_time.count()

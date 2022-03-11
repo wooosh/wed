@@ -127,7 +127,7 @@ struct TextBuffer {
   size_t num_bytes;
 
   /* TODO: handle dead iterators? RAII remove them from array? */
-  // std::vector<std::weak_ptr<iterator>> persisted_iterators;
+  std::vector<std::weak_ptr<iterator>> persisted_iterators;
 
   TextBuffer();
   TextBuffer(const TextBuffer &) = delete;
@@ -136,10 +136,13 @@ struct TextBuffer {
   void AssertValidIterator(iterator i);
   void NewEpoch();
 
+  iterator begin(void);
+  iterator end(void);
+
   iterator AtByteOffset(size_t byte_offset);
   iterator AtLineCol(size_t line, size_t col);
 
-  // std::shared_ptr<iterator> PersistIterator(iterator i);
+  std::shared_ptr<iterator> PersistIterator(iterator i);
 
   void DeleteBetween(iterator, iterator);
 
@@ -194,6 +197,7 @@ struct TextBuffer::iterator {
   friend iterator operator-(iterator, size_t);
   // friend ssize_t operator-(iterator, iterator);
 
+  friend bool operator==(const iterator &, const iterator &);
   friend bool operator<(const iterator &, const iterator &);
   friend bool operator>(const iterator &, const iterator &);
   friend bool operator<=(const iterator &, const iterator &);

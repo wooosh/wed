@@ -13,6 +13,7 @@ deps = [
   dependency('GL'),
   dependency('sdl2_fork', default_options: ['werror=false', 'warning_level=0']),
   dependency('freetype2'),
+  dependency('libxxhash')
 ]
 
 srcs = []

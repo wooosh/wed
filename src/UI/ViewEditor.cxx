@@ -6,7 +6,7 @@
 #include <iostream>
 #include <sys/types.h>
 
-enum Layer { LayerBg, LayerGutter, LayerText };
+enum Layer { LayerBg, LayerGutter, LayerText, LayerCursor };
 
 void ViewEditor::ScrollPx(int amount) {
   if (amount == 0)
@@ -64,6 +64,12 @@ void ViewEditor::draw(RenderContext &render) {
   }
   ScrollPx(move_amount);
 
+  Hash inputs = Hasher()(first_line)(offset_px)(buffer.epoch)(cursor->span_idx)(
+      cursor->byte_offset);
+  if (inputs == last_inputs)
+    return;
+  last_inputs = inputs;
+
   const int digit_width = font.glyphs['0'].advance;
   assert(digit_width > 0);
   const int gutter_width = (uint)digit_width * 5;
@@ -85,9 +91,17 @@ void ViewEditor::draw(RenderContext &render) {
 
     /* draw line */
     int width = 0;
+    float x = 0;
 
     run.clear();
     while (true) {
+      if (i == *cursor) {
+        /* TODO: use font metrics to figure out positioning */
+        render.DrawRect(LayerCursor,
+                        {viewport.x + gutter_width + padding + (int)x, y + 4, 2,
+                         (int)font.line_height},
+                        RGB(0x555555));
+      }
       if (i.IsEOF()) {
         drawRun(render, viewport.x + gutter_width + padding, y, run);
         break;
@@ -101,6 +115,7 @@ void ViewEditor::draw(RenderContext &render) {
         i++;
         y += font.line_height;
         line_num++;
+        x = 0;
         break;
       }
 
@@ -113,8 +128,11 @@ void ViewEditor::draw(RenderContext &render) {
         /* commit run */
         drawRun(render, viewport.x + gutter_width + padding, y, run);
         y += font.line_height;
+        x = 0;
       } else {
         run.push_back(c);
+        // TODO: won't work if the glyph isn't already in the atlas
+        x += font.glyphs[c].advance;
         i++;
       }
     }
@@ -124,7 +142,6 @@ void ViewEditor::draw(RenderContext &render) {
 void ViewEditor::drawRun(RenderContext &render, int x, int y,
                          const std::string &run) {
   (void)render;
-  /* TODO: drawText should not take a cstr */
   float pos = x;
   for (size_t i = 0; i < run.size(); i++) {
     if (isprint(run[i])) {

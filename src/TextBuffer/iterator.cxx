@@ -79,6 +79,10 @@ iterator iterator::operator++(int) {
   return old;
 }
 
+bool operator==(const iterator &lhs, const iterator &rhs) {
+  return lhs.span_idx == rhs.span_idx && lhs.byte_offset == rhs.byte_offset;
+}
+
 bool operator<(const iterator &lhs, const iterator &rhs) {
   return lhs.span_idx < rhs.span_idx ||
          (lhs.span_idx == rhs.span_idx && lhs.byte_offset < rhs.byte_offset);
@@ -130,8 +134,8 @@ iterator &iterator::operator-=(size_t num) {
   }
 
   assert(span_idx > 0);
-  // num -= byte_offset;
-  for (size_t i = span_idx - 1; i > 0; i--) {
+  num -= byte_offset;
+  for (ssize_t i = span_idx - 1; i >= 0; i--) {
     if (num <= parent->spans[i].contents.len) {
       span_idx = i;
       byte_offset = parent->spans[i].contents.len - num;
@@ -140,7 +144,7 @@ iterator &iterator::operator-=(size_t num) {
     num -= parent->spans[i].contents.len;
   }
 
-  unreachable("cannot advance past end");
+  unreachable("cannot before beginning");
 }
 iterator operator-(iterator iter, size_t num) {
   iter -= num;

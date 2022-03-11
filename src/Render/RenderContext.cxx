@@ -176,6 +176,9 @@ void RenderContext::DrawRect(RenderLayerIdx z, Rect dst, Color color) {
 }
 
 void RenderContext::Commit(void) {
+  if (vertexes.size() == 0)
+    return;
+
   /* Orphan the last VBO
    * https://www.khronos.org/opengl/wiki/Buffer_Object_Streaming#Buffer_re-specification
    */
@@ -187,8 +190,8 @@ void RenderContext::Commit(void) {
   glBufferData(GL_ARRAY_BUFFER, vertexes.size() * sizeof(Vertex),
                vertexes.data(), GL_STREAM_DRAW);
 
-  /* TODO: only clear depth buffer */
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glClear(GL_DEPTH_BUFFER_BIT);
 
   glEnable(GL_BLEND);
 
