@@ -29,7 +29,6 @@ void TextBuffer::InsertAt(iterator pos, const ForwardIter begin,
    * contigous in memory and in the text buffer */
   if (pos.span_idx > 0) {
     Span &prev = spans[pos.span_idx - 1];
-    printf("insert %zu %zu\n", pos.byte_offset, pos_span.contents.len);
     if (pos.byte_offset == 0 &&
         prev.contents.cend() == insert_span.contents.begin &&
         prev.newline_ptrs.cend() == insert_span.newline_ptrs.begin) {

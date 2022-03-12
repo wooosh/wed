@@ -97,7 +97,7 @@ int main(int argc, char **argv) {
 
   SDL_Event event;
   bool running = true;
-  const uint64_t frame_ms = 1000 / 60;
+  const uint64_t frame_ms = 1000 / 120;
   uint64_t last_render_time = 0;
   int frame_num = 0;
 
@@ -175,36 +175,37 @@ int main(int argc, char **argv) {
       }
     }
 
-    if (SDL_GetTicks64() - last_render_time > frame_ms) {
-      editor.target_px += -scroll_accum * 3 * (int)font->line_height;
-      scroll_accum = 0;
-      auto t1 = std::chrono::high_resolution_clock::now();
-      root.draw(rctx);
-      auto t2 = std::chrono::high_resolution_clock::now();
-      rctx.Commit();
-      auto t3 = std::chrono::high_resolution_clock::now();
+    /* TODO: fix */
+    // if (SDL_GetTicks64() - last_render_time > frame_ms) {
+    editor.target_px += -scroll_accum * 3 * (int)font->line_height;
+    scroll_accum = 0;
+    auto t1 = std::chrono::high_resolution_clock::now();
+    root.draw(rctx);
+    auto t2 = std::chrono::high_resolution_clock::now();
+    rctx.Commit();
+    auto t3 = std::chrono::high_resolution_clock::now();
 
-      if (frame_num % 60 == 0) {
-        std::chrono::duration<double, std::nano> total_time =
-            std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t0);
-        std::chrono::duration<double, std::nano> layout_time =
-            std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1);
-        std::chrono::duration<double, std::nano> commit_time =
-            std::chrono::duration_cast<std::chrono::nanoseconds>(t3 - t2);
-        std::cerr << "\nnew frame:\n";
-        std::cerr << "layout: " << layout_time.count() << "ns\n";
-        std::cerr << "commit: " << commit_time.count() << "ns\n";
-        std::cerr << "total draw:  "
-                  << layout_time.count() + commit_time.count() << "ns\n";
-        std::cerr << "total draw + events:  " << total_time.count() << "ns\n";
-        std::cerr << "fps: "
-                  << 1000000000 / (layout_time.count() + commit_time.count())
-                  << " fps\n";
-      }
-      last_render_time = SDL_GetTicks64();
-      frame_num++;
-      frame_num %= 60;
+    if (frame_num % 60 == 0) {
+      std::chrono::duration<double, std::nano> total_time =
+          std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t0);
+      std::chrono::duration<double, std::nano> layout_time =
+          std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1);
+      std::chrono::duration<double, std::nano> commit_time =
+          std::chrono::duration_cast<std::chrono::nanoseconds>(t3 - t2);
+      std::cerr << "\nnew frame:\n";
+      std::cerr << "layout: " << layout_time.count() << "ns\n";
+      std::cerr << "commit: " << commit_time.count() << "ns\n";
+      std::cerr << "total draw:  " << layout_time.count() + commit_time.count()
+                << "ns\n";
+      std::cerr << "total draw + events:  " << total_time.count() << "ns\n";
+      std::cerr << "fps: "
+                << 1000000000 / (layout_time.count() + commit_time.count())
+                << " fps\n";
     }
+    last_render_time = SDL_GetTicks64();
+    frame_num++;
+    frame_num %= 60;
+    //}
   }
 
   LocateFontDeinit();

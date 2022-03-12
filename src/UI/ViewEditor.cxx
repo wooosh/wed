@@ -82,7 +82,6 @@ void ViewEditor::NormalizeCursor(void) {
 
   TextBuffer::iterator iter = buffer.AtLineCol(first_line, 0);
 
-  /* FIXME: end of buffer check */
   if (first_line == 0 && offset_px < 0) {
     offset_px = 0;
     return;
@@ -92,6 +91,11 @@ void ViewEditor::NormalizeCursor(void) {
     while (!iter.IsEOF()) {
       uint8_t c = *iter;
       iter++;
+
+      if (iter.IsEOF()) {
+        offset_px = std::min(offset_px, (int64_t)current_line_height);
+        break;
+      }
 
       if (c == '\n') {
         if (offset_px > current_line_height) {
@@ -126,7 +130,7 @@ void ViewEditor::NormalizeCursor(void) {
       uint8_t c = *iter;
       iter--;
 
-      if (c == '\n') {
+      if (c == '\n' || iter == buffer.begin()) {
         if (offset_px < 0) {
           first_line--;
           offset_px += current_line_height;
@@ -232,6 +236,22 @@ void ViewEditor::draw(RenderContext &render) {
 
   UpdateLayout();
 
+  Hash inputs = Hasher()
+                    .add(layout_version)
+                    /* TODO: handle update time */
+                    .add(offset_px)
+                    .add(first_line)
+                    .add(buffer.epoch)
+                    .add(viewport.w)
+                    .add(viewport.h)
+                    .add(viewport.x)
+                    .add(viewport.y);
+
+  if (inputs == render_inputs)
+    return;
+
+  inputs = render_inputs;
+
   const int digit_width = font.glyphs['0'].advance;
   const int gutter_width = CalculateGutterWidth();
   render.DrawRect(LayerBg, viewport, RGB(0xf7f4ef));
@@ -251,7 +271,7 @@ void ViewEditor::draw(RenderContext &render) {
 
     float x = 0;
     run.clear();
-    for (uint16_t i = 0; i < line.len_bytes; i++) {
+    for (uint16_t i = 0; i < line.len_bytes + line.ends_line; i++) {
       uint8_t c = *iter;
       if (iter == *cursor) {
         render.DrawRect(LayerCursor,
@@ -261,6 +281,8 @@ void ViewEditor::draw(RenderContext &render) {
       }
       iter++;
 
+      if (c == '\n')
+        continue;
       if (!isprint(c))
         c = '?';
 
@@ -268,8 +290,6 @@ void ViewEditor::draw(RenderContext &render) {
       x += font.glyphs[c].advance;
     }
     /* skip newline TODO: handle cursor at end of line */
-    if (line.ends_line)
-      iter++;
 
     drawRun(viewport.x + gutter_width, y, run);
     y += font.line_height;

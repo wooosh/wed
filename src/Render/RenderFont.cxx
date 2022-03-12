@@ -77,18 +77,22 @@ std::optional<RenderFont> LoadFont(RenderContext *rctx, std::string path,
    * sized characters */
   constexpr size_t target_num_glyphs = 256;
 
-  size_t sections;
+  size_t major_sections;
+  size_t minor_sections;
   if constexpr (rf.used_space.axis == BitMatrix2DFixedAxis::kWidth) {
-    sections = x_sections;
+    major_sections = x_sections;
+    minor_sections = y_sections;
   } else {
-    sections = y_sections;
+    major_sections = y_sections;
+    minor_sections = x_sections;
   }
 
-  size_t num_glyphs_per_row = rf.used_space.major_len / sections;
+  size_t num_glyphs_per_row =
+      DivideRoundUp((size_t)rf.used_space.major_len, major_sections);
   size_t rows_needed = DivideRoundUp(target_num_glyphs, num_glyphs_per_row);
 
-  rf.used_space.Resize(rows_needed * 2);
-  rf.damaged_space.Resize(rows_needed * 2);
+  rf.used_space.Resize(rows_needed * 2 * minor_sections);
+  rf.damaged_space.Resize(rows_needed * 2 * minor_sections);
 
   GPUTexture::Format format;
   if (rf.subpixel) {
