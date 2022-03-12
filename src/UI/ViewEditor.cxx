@@ -2,6 +2,7 @@
 #include "SDL_opengl_glext.h"
 #include "src/Render/Types.hxx"
 #include <cassert>
+#include <cctype>
 #include <chrono>
 #include <cstdint>
 #include <iostream>
@@ -13,6 +14,15 @@ void ViewEditor::ScrollPx(int amount) {
   if (amount == 0)
     return;
 
+  offset_px += amount;
+
+  if (first_line == 0 && offset_px < 0)
+    offset_px = 0;
+
+  if (1)
+    return;
+
+  /* TODO: account for line height not being constant due to wrapping */
   offset_px += amount;
   ssize_t line_delta = offset_px / (int64_t)font.line_height;
   if (offset_px < 0) {
@@ -56,6 +66,154 @@ int NumDigits(size_t num) {
   return len;
 }
 
+int ViewEditor::CalculateGutterWidth(void) {
+  const int digit_width = font.glyphs['0'].advance;
+  assert(digit_width > 0);
+  const int line_no_digits = 2 + NumDigits(buffer.num_lines);
+  /* 2 digit padding */
+  return digit_width * (line_no_digits + 2);
+}
+
+void ViewEditor::NormalizeCursor(void) {
+  const int textarea_w = viewport.w - CalculateGutterWidth();
+
+  float x = 0;
+  uint16_t current_line_height = font.line_height;
+
+  TextBuffer::iterator iter = buffer.AtLineCol(first_line, 0);
+
+  /* FIXME: end of buffer check */
+  if (first_line == 0 && offset_px < 0) {
+    offset_px = 0;
+    return;
+  }
+
+  if (offset_px > 0) {
+    while (!iter.IsEOF()) {
+      uint8_t c = *iter;
+      iter++;
+
+      if (c == '\n') {
+        if (offset_px > current_line_height) {
+          first_line++;
+          offset_px -= current_line_height;
+        } else {
+          break;
+        }
+        x = 0;
+        current_line_height = font.line_height;
+        continue;
+      }
+
+      if (!isprint(c)) {
+        c = '?';
+      }
+
+      float advance = font.glyphs[c].advance;
+      if (x + advance >= textarea_w) {
+        x = advance;
+        current_line_height += font.line_height;
+        continue;
+      }
+
+      x += advance;
+    }
+  } else if (offset_px < 0) {
+    /* skip newline and first char (?) */
+    iter--;
+    iter--;
+    while (iter != buffer.begin()) {
+      uint8_t c = *iter;
+      iter--;
+
+      if (c == '\n') {
+        if (offset_px < 0) {
+          first_line--;
+          offset_px += current_line_height;
+        } else {
+          break;
+        }
+        x = 0;
+        current_line_height = font.line_height;
+        continue;
+      }
+
+      if (!isprint(c)) {
+        c = '?';
+      }
+
+      float advance = font.glyphs[c].advance;
+      if (x + advance >= textarea_w) {
+        x = advance;
+        current_line_height += font.line_height;
+        continue;
+      }
+
+      x += advance;
+    }
+  }
+}
+
+void ViewEditor::UpdateLayout(void) {
+  Hash inputs = Hasher()
+                    .add(first_line)
+                    /* TODO: handle update time */
+                    .add(offset_px)
+                    .add(buffer.epoch)
+                    .add(viewport.w)
+                    .add(viewport.h);
+  if (inputs == layout_inputs)
+    return;
+  layout_inputs = inputs;
+
+  NormalizeCursor();
+  layout.clear();
+  layout_version++;
+
+  const int textarea_w = viewport.w - CalculateGutterWidth();
+
+  /* cache line length based on hash of line? probably not worth it*/
+  /* TODO: normalize offset px */
+  int y = -offset_px;
+  TextBuffer::iterator iter = buffer.AtLineCol(first_line, 0);
+  float x = 0;
+  uint16_t run_bytes = 0;
+  uint16_t current_line_height = 0;
+  bool logical_line_next = true;
+
+  while (y < viewport.h && !iter.IsEOF()) {
+    uint8_t c = *iter;
+    iter++;
+
+    if (c == '\n') {
+      y += font.line_height;
+      current_line_height += font.line_height;
+      layout.push_back({logical_line_next, true, run_bytes});
+      x = 0, run_bytes = 0;
+      current_line_height = 0;
+      logical_line_next = true;
+      continue;
+    }
+
+    if (!isprint(c)) {
+      c = '?';
+    }
+
+    float advance = font.glyphs[c].advance;
+    if (x + advance >= textarea_w) {
+      layout.push_back({logical_line_next, false, run_bytes});
+      x = advance, run_bytes = 1;
+      y += font.line_height;
+      current_line_height += font.line_height;
+      logical_line_next = false;
+      continue;
+    }
+
+    x += advance;
+    run_bytes++;
+  }
+}
+
 void ViewEditor::draw(RenderContext &render) {
   /* apply scroll velocity TODO: frame update vs draw */
   constexpr double anim_factor = 3;
@@ -69,96 +227,61 @@ void ViewEditor::draw(RenderContext &render) {
   }
   ScrollPx(move_amount);
 
+  /* TODO: caching */
   is_animating = target_px != 0;
 
-  Hash inputs = Hasher()
-                    .add(first_line)
-                    .add(offset_px)
-                    .add(buffer.epoch)
-                    .add(viewport.w)
-                    .add(viewport.h)
-                    .add(viewport.x)
-                    .add(viewport.y)
-                    .add(cursor->span_idx)
-                    .add(cursor->byte_offset);
-  if (inputs == last_inputs)
-    return;
-  last_inputs = inputs;
+  UpdateLayout();
 
   const int digit_width = font.glyphs['0'].advance;
-  assert(digit_width > 0);
-  const int line_no_digits = 2 + NumDigits(buffer.num_lines);
-  /* 2 digit padding */
-  const int gutter_width = digit_width * (line_no_digits + 2);
-  const int padding = 3;
-
+  const int gutter_width = CalculateGutterWidth();
   render.DrawRect(LayerBg, viewport, RGB(0xf7f4ef));
   render.DrawRect(LayerGutter,
                   {viewport.x, viewport.y, gutter_width, viewport.h}, Dim(0.1));
 
   int y = viewport.y - offset_px;
   size_t line_num = first_line;
-  TextBuffer::iterator i = buffer.AtLineCol(first_line, 0);
-
+  TextBuffer::iterator iter = buffer.AtLineCol(first_line, 0);
   std::string run;
 
-  while (y < viewport.y + viewport.h && !i.IsEOF()) {
-    /* draw gutter/line number */
-    drawRun(render, viewport.x + digit_width, y, std::to_string(line_num + 1));
+  for (VisualLine line : layout) {
+    if (line.starts_line) {
+      drawRun(viewport.x + digit_width, y, std::to_string(line_num + 1));
+      line_num++;
+    }
 
-    /* draw line */
     float x = 0;
-
     run.clear();
-    while (y < viewport.y + viewport.h) {
-      if (i == *cursor) {
-        /* TODO: use font metrics to figure out positioning */
+    for (uint16_t i = 0; i < line.len_bytes; i++) {
+      uint8_t c = *iter;
+      if (iter == *cursor) {
         render.DrawRect(LayerCursor,
-                        {viewport.x + gutter_width + padding + (int)x, y + 4, 2,
+                        {viewport.x + gutter_width + (int)x, y + 4, 2,
                          (int)font.line_height},
                         RGB(0x555555));
       }
-      if (i.IsEOF()) {
-        drawRun(render, viewport.x + gutter_width + padding, y, run);
-        break;
-      }
+      iter++;
 
-      uint8_t c = *i;
-
-      if (c == '\n') {
-        /* commit run */
-        drawRun(render, viewport.x + gutter_width + padding, y, run);
-        i++;
-        y += font.line_height;
-        line_num++;
-        x = 0;
-        break;
-      }
-
-      if (isprint(c) == 0) {
-        /* TODO: better unprintable char handling w/unicode */
+      if (!isprint(c))
         c = '?';
-      }
-      int advance = font.glyphs[*i].advance;
-      if (x + advance >= viewport.w - gutter_width) {
-        /* commit run */
-        drawRun(render, viewport.x + gutter_width + padding, y, run);
-        run.clear();
-        y += font.line_height;
-        x = 0;
-      } else {
-        run.push_back(c);
-        // TODO: won't work if the glyph isn't already in the atlas
-        x += font.glyphs[c].advance;
-        i++;
-      }
+
+      run.push_back(c);
+      x += font.glyphs[c].advance;
     }
+    /* skip newline TODO: handle cursor at end of line */
+    if (line.ends_line)
+      iter++;
+
+    drawRun(viewport.x + gutter_width, y, run);
+    y += font.line_height;
   }
+
+  /* TODO: use transaction grouping to minimize per edit
+   * calculations where we dont care about the intermediate steps */
 }
 
-void ViewEditor::drawRun(RenderContext &render, int x, int y,
-                         const std::string &run) {
-  (void)render;
+void ViewEditor::drawRun(int x, int y, const std::string &run) {
+  if (y + (int)font.line_height < viewport.y)
+    return;
   float pos = x;
   for (size_t i = 0; i < run.size(); i++) {
     if (isprint(run[i])) {

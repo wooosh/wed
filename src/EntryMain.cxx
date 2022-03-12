@@ -203,7 +203,7 @@ int main(int argc, char **argv) {
       }
       last_render_time = SDL_GetTicks64();
       frame_num++;
-      // frame_num %= 60;
+      frame_num %= 60;
     }
   }
 
